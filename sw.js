@@ -1,25 +1,25 @@
-// This Service Worker is now a "Pass-Through" proxy.
-// It allows the browser to fetch the absolute latest files from GitHub
-// while still fulfilling the technical requirement for PWA installability.
+// This Service Worker is a "No-Op" pass-through.
+// It bypasses the cache entirely to ensure the browser always 
+// fetches the latest files directly from GitHub.
 
 self.addEventListener('install', event => {
-    // Skip waiting so the service worker activates immediately
+    // Force the service worker to take control immediately
     self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-    // Clean up any old caches that might exist from previous versions
+    // Explicitly delete any existing caches to prevent residual data
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => caches.delete(cache))
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', event => {
-    // Simply pass the request through to the network.
-    // This ignores cache and always gets the latest file from GitHub.
+    // Always fetch from the network. Never look at the cache.
+    // This allows GitHub Pages updates to show instantly.
     event.respondWith(fetch(event.request));
 });
