@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prodflow-v1';
+const CACHE_NAME = 'prodflow-v1.0.1';
 const urlsToCache = [
     './',
     './index.html',
