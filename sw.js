@@ -1,23 +1,25 @@
-const CACHE_NAME = 'prodflow-v1.0.1';
-const urlsToCache = [
-    './',
-    './index.html',
-    './manifest.json'
-];
+// This Service Worker is now a "Pass-Through" proxy.
+// It allows the browser to fetch the absolute latest files from GitHub
+// while still fulfilling the technical requirement for PWA installability.
 
 self.addEventListener('install', event => {
+    // Skip waiting so the service worker activates immediately
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+    // Clean up any old caches that might exist from previous versions
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cache => caches.delete(cache))
+            );
+        })
     );
 });
 
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) return response;
-                return fetch(event.request);
-            })
-    );
+    // Simply pass the request through to the network.
+    // This ignores cache and always gets the latest file from GitHub.
+    event.respondWith(fetch(event.request));
 });
