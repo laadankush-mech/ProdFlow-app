@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en" class="transition-colors duration-300">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Management App</title>
+    
+    <!-- PWA & iOS Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ProdFlow">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#2563eb' }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom scrollbar for history tables */
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- UPDATE OVERLAY (Highest z-index) -->
+    <div id="updateOverlay" class="fixed inset-0 bg-black bg-opacity-80 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-blue-500">
+            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Update Required</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">Version <span id="updateVersionNum" class="font-bold text-blue-600"></span> is available. Please update your app to continue.</p>
+            <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-sm text-left text-gray-500 mb-6 border border-gray-200 dark:border-gray-700">
+                <strong class="text-gray-800 dark:text-gray-200">Release Notes:</strong><br/>
+                <span id="updateNotes" class="mt-1 block"></span>
+            </div>
+            <a id="updateDownloadBtn" href="#" target="_blank" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg active:scale-95">
+                Download Update
+            </a>
+        </div>
+    </div>
+
+    <!-- iOS PWA INSTALL PROMPT -->
+    <div id="iosPrompt" class="fixed bottom-4 left-4 right-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl border border-blue-500 z-[300] hidden flex-col items-center text-center fade-in">
+        <button onclick="document.getElementById('iosPrompt').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-times text-xl"></i></button>
+        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-3">
+            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+        </div>
+        <h3 class="font-bold text-lg text-gray-800 dark:text-white">Install ProdFlow on iPhone</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">Tap the <b class="text-blue-600">Share</b> button at the bottom of Safari, then select <b class="text-blue-600">"Add to Home Screen"</b> to install this app.</p>
+    </div>
+
+    <!-- HEADER -->
+    <header class="bg-blue-600 dark:bg-gray-900 text-white p-4 shadow-md sticky top-0 z-40 transition-colors duration-300">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMenu()" id="menuBtn" class="hidden hover:text-blue-200 text-xl"><i class="fa-solid fa-bars"></i></button>
+                <div class="w-8 h-8 bg-white text-blue-600 rounded flex items-center justify-center font-bold text-xl">
+                    <i class="fa-solid fa-industry text-lg"></i>
+                </div>
+                <h1 class="text-xl font-bold" data-i18n="appTitle">ProdFlow</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleLanguage()" class="flex items-center gap-1 hover:text-blue-200">
+                    <i class="fa-solid fa-globe"></i>
+                    <span id="langDisplay" class="text-sm font-semibold uppercase">EN</span>
+                </button>
+                <button onclick="toggleTheme()" class="hover:text-blue-200 w-6 h-6 flex items-center justify-center">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION DRAWER (Hidden by default) -->
+    <div id="drawerOverlay" onclick="toggleMenu()" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden transition-opacity"></div>
+    <div id="navDrawer" class="fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 flex flex-col">
+        <!-- Drawer Header / User Info -->
+        <div class="bg-blue-600 dark:bg-gray-900 p-6 text-white flex flex-col items-start relative">
+            <button onclick="toggleMenu()" class="absolute top-4 right-4 hover:text-blue-200"><i class="fa-solid fa-times text-xl"></i></button>
+            <div class="w-12 h-12 bg-white text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold mb-3 shadow">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <p class="text-sm opacity-80" data-i18n="loggedInAs">Logged in as:</p>
+            <h3 class="text-lg font-bold truncate w-full" id="drawerUserName"></h3>
+            <p class="text-xs font-mono bg-black bg-opacity-20 px-2 py-1 rounded mt-1" id="drawerUserCode"></p>
+        </div>
+        
+        <!-- Drawer Links -->
+        <nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-1 px-2" id="drawerLinks"></nav>
+        
+        <!-- Drawer Footer -->
+        <div class="p-4 border-t border-gray-100 dark:border-gray-700">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 px-4 py-2 rounded-lg transition-colors font-semibold">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> <span data-i18n="logout">Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 relative">
+        
+        <!-- LOGIN SCREEN (Unified - Hidden initially to prevent flash) -->
+        <div id="loginView" class="hidden max-w-md mx-auto mt-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden fade-in">
+            <div class="bg-blue-50 dark:bg-gray-900/50 p-6 text-center border-b border-gray-100 dark:border-gray-700">
+                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-md mb-4"><i class="fa-solid fa-fingerprint"></i></div>
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="secureLogin">Secure Login</h2>
+            </div>
+            <div class="p-6">
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1 opacity-80 text-gray-700 dark:text-gray-300" data-i18n="enterCode">Enter Unique Code</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-key absolute left-3 top-3.5 text-gray-400"></i>
+                            <input type="text" id="loginCode" oninput="checkAdminCode()" required class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase transition-colors" />
+                        </div>
+                    </div>
+                    <!-- Hidden Password Field (Only shows for ADMIN) -->
+                    <div id="passwordWrapper" class="hidden fade-in">
+                        <label class="block text-sm font-medium mb-1 opacity-80 text-gray-700 dark:text-gray-300" data-i18n="password">Admin Password</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-3 top-3.5 text-gray-400"></i>
+                            <input type="password" id="adminPass" class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors mt-6 text-lg" data-i18n="login">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- APP VIEWS CONTAINER -->
+        <div id="appView" class="hidden">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="hidden space-y-6 fade-in">
+                <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-chart-simple text-blue-500"></i> <span data-i18n="dashboard">Dashboard</span></h2>
+                
+                <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <!-- Timeframe Toggle -->
+                        <div class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                            <button onclick="setDashboardTimeframe('daily')" id="tf-daily" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn" data-i18n="daily">Daily</button>
+                            <button onclick="setDashboardTimeframe('weekly')" id="tf-weekly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="weekly">Weekly</button>
+                            <button onclick="setDashboardTimeframe('monthly')" id="tf-monthly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="monthly">Monthly</button>
+                            <button onclick="setDashboardTimeframe('yearly')" id="tf-yearly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="yearly">Yearly</button>
+                        </div>
+                        
+                        <!-- Dynamic Date/Month/Year Inputs -->
+                        <div id="filter-date-wrapper" class="flex-1 min-w-[200px]">
+                            <input type="date" id="dashFilterDate" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none" />
+                        </div>
+                        <div id="filter-month-wrapper" class="hidden flex-1 min-w-[200px]">
+                            <input type="month" id="dashFilterMonth" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none" />
+                        </div>
+                        <div id="filter-year-wrapper" class="hidden flex-1 min-w-[200px]">
+                            <select id="dashFilterYear" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none"></select>
+                        </div>
+                        
+                        <!-- Employee Filter -->
+                        <div class="flex-1 min-w-[200px]">
+                            <select id="dashFilterEmployee" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none">
+                                <option value="ALL">-- All Employees --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex items-center gap-4">
+                        <div class="p-4 bg-blue-500 text-white rounded-full"><i class="fa-solid fa-check-double text-xl"></i></div>
+                        <div>
+                            <p class="text-blue-600 dark:text-blue-400 font-medium" data-i18n="totalProd">Total Production</p>
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white" id="dashTotalQty">0 <span class="text-sm font-normal text-gray-500">units</span></h3>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 dark:bg-green-900/20 p-6 rounded-2xl border border-green-100 dark:border-green-800/50 flex items-center gap-4">
+                        <div class="p-4 bg-green-500 text-white rounded-full"><i class="fa-solid fa-briefcase text-xl"></i></div>
+                        <div>
+                            <p class="text-green-600 dark:text-green-400 font-medium" data-i18n="activeJobs">Active Jobs</p>
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white" id="dashTotalJobs">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users View -->
+            <div id="view-users" class="hidden space-y-6 fade-in">
+                <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-users text-blue-500"></i> <span data-i18n="users">Manage Users</span></h2>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white" data-i18n="addUser">Add User</h3>
+                    <form onsubmit="generateUser(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="empName">Employee Name</label>
+                            <input type="text" id="newUserName" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="role">Role</label>
+                            <select id="newUserRole" class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="employee">Employee</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="manager">Manager</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> <span data-i18n="generateCode">Generate Code</span>
+                        </button>
+                    </form>
+                    <div id="codeResult" class="hidden mt-6 p-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-800 rounded-lg flex items-center justify-between">
+                        <div>
+                            <p class="text-green-800 dark:text-green-300 font-medium text-sm" data-i18n="codeSuccess">Code Generated Successfully!</p>
+                            <p class="text-2xl font-mono font-bold text-green-900 dark:text-green-400 tracking-wider mt-1" id="newCodeDisplay"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto custom-scroll">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm">
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="empName">Employee Name</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="role">Role</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="accessCode">Access Code</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300 text-right" data-i18n="action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jobs View -->
+            <div id="view-jobs" class="hidden space-y-6 fade-in">
+                <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-briefcase text-blue-500"></i> <span data-i18n="jobs">Manage Jobs</span></h2>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white" data-i18n="addJob">Add New Job</h3>
+                    <form onsubmit="addJob(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="jobName">Job Name</label>
+                            <input type="text" id="newJobName" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="jobDesc">Job Description</label>
+                            <input type="text" id="newJobDesc" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <button type="submit" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors" data-i18n="addJobBtn">+ Add Job</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="jobsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Production View -->
+            <div id="view-production" class="hidden max-w-3xl mx-auto space-y-6 fade-in">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800 dark:text-white" data-i18n="production">Production Entry</h2>
+                </div>
+                <form onsubmit="submitProduction(event)" class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                    
+                    <div id="productionEmployeeWrapper" class="hidden">
+                        <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="selectEmployee">Select Employee</label>
+                        <select id="prodEmployeeSelect" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-lg"></select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="jobName">Job Name</label>
+                            <select id="prodJobSelect" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-lg"></select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="date">Date</label>
+                            <input type="date" id="prodDate" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="qty">Quantity Produced</label>
+                            <input type="number" id="prodQty" min="1" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold" />
+                        </div>
+
+                        <div class="sm:col-span-2 border-t border-gray-100 dark:border-gray-700 pt-4">
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="logType">Log Type</label>
+                            <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
+                                <button type="button" onclick="setLogType('hourly')" id="logTypeHourly" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 log-btn" data-i18n="hourly"><i class="fa-solid fa-clock"></i> Hourly</button>
+                                <button type="button" onclick="setLogType('daily')" id="logTypeDaily" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 log-btn" data-i18n="daily"><i class="fa-solid fa-calendar"></i> Daily</button>
+                            </div>
+                        </div>
+                        
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="timeMethod">Time Entry Method</label>
+                            <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl mb-4">
+                                <button type="button" onclick="setTimeMethod('range')" id="timeMethodRange" class="flex-1 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 time-btn" data-i18n="timeRange">Start/End Time</button>
+                                <button type="button" onclick="setTimeMethod('duration')" id="timeMethodDuration" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 time-btn" data-i18n="duration">Total Hours</button>
+                            </div>
+                            
+                            <div id="timeRangeInputs" class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="startTime">Start Time</label>
+                                    <input type="time" id="prodStartTime" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="endTime">End Time</label>
+                                    <input type="time" id="prodEndTime" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                            </div>
+
+                            <div id="timeDurationInput" class="hidden">
+                                <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="durationHours">Total Hours</label>
+                                <input type="number" step="0.25" min="0.25" id="prodDuration" placeholder="e.g. 8" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 text-lg mt-4">
+                        <i class="fa-solid fa-check-circle"></i> <span data-i18n="submit">Submit Entry</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- History View -->
+            <div id="view-history" class="hidden space-y-6 fade-in">
+                <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> <span data-i18n="history">Entries History</span></h2>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto custom-scroll">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm" id="historyTableHeader">
+                                    <!-- Populated by JS based on role -->
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- CUSTOM EDIT LOG MODAL -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden items-center justify-center fade-in">
+        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="editEntry">Edit Entry</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="editForm" onsubmit="saveEdit(event)" class="space-y-4">
+                <input type="hidden" id="editLogId">
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="date">Date</label>
+                    <input type="date" id="editDate" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="jobName">Job</label>
+                    <select id="editJob" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="qty">Quantity</label>
+                    <input type="number" id="editQty" required min="1" class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM EDIT USER MODAL -->
+    <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden items-center justify-center fade-in">
+        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">Edit User</h3>
+                <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="editUserForm" onsubmit="saveUserEdit(event)" class="space-y-4">
+                <input type="hidden" id="editUserId">
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="empName">Name</label>
+                    <input type="text" id="editUserName" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="role">Role</label>
+                    <select id="editUserRole" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                        <option value="employee">Employee</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeEditUserModal()" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRM/ALERT MODAL -->
+    <div id="msgModal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] hidden items-center justify-center fade-in">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 border border-gray-100 dark:border-gray-700 text-center">
+            <div id="msgIcon" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-4"></div>
+            <h3 id="msgTitle" class="text-xl font-bold text-gray-800 dark:text-white mb-2"></h3>
+            <p id="msgDesc" class="text-gray-500 dark:text-gray-400 mb-6"></p>
+            <div id="msgButtons" class="flex gap-3 justify-center"></div>
+        </div>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-blue-900 bg-opacity-90 z-[100] hidden flex-col items-center justify-center text-white fade-in">
+        <i class="fa-solid fa-circle-notch fa-spin text-5xl mb-4 text-blue-400"></i>
+        <h2 class="text-xl font-bold tracking-widest uppercase">Syncing Cloud...</h2>
+        <p class="text-sm text-blue-200 mt-2">Connecting to Google Sheets</p>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        // ---------------------------------------------------------
+        // CONFIGURATION: APPS SCRIPT & APK UPDATE OTA GIST
+        // ---------------------------------------------------------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZTnq-WjYe9urm6ir2fPWIAwrTU51FugsBClWIe0egoa60H0-zX48Ty-jJwKM2zd7S/exec';
+        
+        const APP_VERSION = "1.0.0"; // Increment this when building a new APK
+        const UPDATE_GIST_URL = "https://gist.githubusercontent.com/laadankush-mech/349aebc0cb52ed932c0fc1aaa66c8e3c/raw/update.json";
+
+        // --- STATE ---
+        let db = { users: [], jobs: [], logs: [] };
+        let currentUser = null;
+        let currentLang = 'en';
+        let selectedLogType = 'hourly';
+        let selectedTimeframe = 'daily';
+        let selectedTimeMethod = 'range';
+
+        // --- DICTIONARY (i18n) ---
+        const i18n = {
+            en: {
+                appTitle: "ProdFlow", secureLogin: "Secure Login", enterCode: "Enter Unique Code", password: "Admin Password", login: "Login", logout: "Logout", loggedInAs: "Logged in as:",
+                dashboard: "Dashboard", users: "Manage Users", jobs: "Manage Jobs", production: "Production Entry", history: "Entries History",
+                daily: "Daily", weekly: "Weekly", monthly: "Monthly", yearly: "Yearly", hourly: "Hourly",
+                totalProd: "Total Production", activeJobs: "Active Jobs", addUser: "Add User", empName: "Employee Name", role: "Role", generateCode: "Generate Code", codeSuccess: "Code Generated Successfully!", accessCode: "Access Code",
+                addJob: "Add New Job", jobName: "Job Name", jobDesc: "Job Description", addJobBtn: "+ Add Job",
+                qty: "Quantity Produced", logType: "Log Type", submit: "Submit Entry", successMsg: "Entry submitted successfully!",
+                timeMethod: "Time Entry Method", timeRange: "Start/End Time", duration: "Total Hours", startTime: "Start Time", endTime: "End Time", durationHours: "Total Hours",
+                date: "Date", action: "Action", editEntry: "Edit Entry", selectEmployee: "-- Select Employee --"
+            },
+            mr: {
+                appTitle: "प्रॉडफ्लो", secureLogin: "सुरक्षित लॉगिन", enterCode: "युनिक कोड टाका", password: "अॅडमिन पासवर्ड", login: "लॉग इन करा", logout: "बाहेर पडा", loggedInAs: "लॉग इन:",
+                dashboard: "डॅशबोर्ड", users: "वापरकर्ते व्यवस्थापन", jobs: "कामे व्यवस्थापन", production: "उत्पादन नोंद", history: "नोंदींचा इतिहास",
+                daily: "दैनिक", weekly: "साप्ताहिक", monthly: "मासिक", yearly: "वार्षिक", hourly: "तासनिहाय",
+                totalProd: "एकूण उत्पादन", activeJobs: "सक्रिय कामे", addUser: "वापरकर्ता जोडा", empName: "कर्मचाऱ्याचे नाव", role: "पद (Role)", generateCode: "कोड तयार करा", codeSuccess: "कोड यशस्वीरित्या तयार झाला!", accessCode: "अॅक्सेस कोड",
+                addJob: "नवीन काम जोडा", jobName: "कामाचे नाव", jobDesc: "कामाचे वर्णन", addJobBtn: "+ काम जोडा",
+                qty: "उत्पादित संख्या", logType: "नोंद प्रकार", submit: "सबमिट करा", successMsg: "नोंद यशस्वीरित्या सबमिट केली!",
+                timeMethod: "वेळ नोंदवण्याची पद्धत", timeRange: "प्रारंभ/समाप्ती वेळ", duration: "एकूण तास", startTime: "सुरुवातीची वेळ", endTime: "समाप्तीची वेळ", durationHours: "एकूण तास",
+                date: "तारीख", action: "कृती", editEntry: "नोंद संपादित करा", selectEmployee: "-- कर्मचारी निवडा --"
+            },
+            hi: {
+                appTitle: "प्रोडफ्लो", secureLogin: "सुरक्षित लॉगिन", enterCode: "यूनिक कोड दर्ज करें", password: "एडमिन पासवर्ड", login: "लॉग इन करें", logout: "लॉग आउट", loggedInAs: "लॉग इन हैं:",
+                dashboard: "डैशबोर्ड", users: "उपयोगकर्ता प्रबंधन", jobs: "कार्य प्रबंधन", production: "उत्पादन प्रविष्टि", history: "प्रविष्टियों का इतिहास",
+                daily: "दैनिक", weekly: "साप्ताहिक", monthly: "मासिक", yearly: "वार्षिक", hourly: "प्रति घंटे",
+                totalProd: "कुल उत्पादन", activeJobs: "सक्रिय कार्य", addUser: "उपयोगकर्ता जोड़ें", empName: "कर्मचारी का नाम", role: "पद (Role)", generateCode: "कोड जनरेट करें", codeSuccess: "कोड सफलतापूर्वक जनरेट हुआ!", accessCode: "एक्सेस कोड",
+                addJob: "नया काम जोड़ें", jobName: "काम का नाम", jobDesc: "काम का विवरण", addJobBtn: "+ काम जोड़ें",
+                qty: "उत्पादित मात्रा", logType: "लॉग प्रकार", submit: "सबमिट करें", successMsg: "प्रविष्टि सफलतापूर्वक सबमिट की गई!",
+                timeMethod: "समय दर्ज करने की विधि", timeRange: "शुरू/समाप्ति समय", duration: "कुल घंटे", startTime: "शुरू करने का समय", endTime: "समाप्ति का समय", durationHours: "कुल घंटे",
+                date: "तारीख", action: "कार्रवाई", editEntry: "प्रविष्टि संपादित करें", selectEmployee: "-- कर्मचारी चुनें --"
+            }
+        };
+
+        // --- OTA UPDATE LOGIC ---
+        async function checkUpdate() {
+            try {
+                // Bypass browser cache with a timestamp
+                const res = await fetch(UPDATE_GIST_URL + '?t=' + new Date().getTime());
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                // Compare fetched version vs APP_VERSION
+                if (compareVersions(data.version, APP_VERSION) > 0) {
+                    showUpdateModal(data);
+                }
+            } catch (e) {
+                console.log("Update check failed or device is offline", e);
+            }
+        }
+
+        function compareVersions(v1, v2) {
+             const v1Parts = v1.split('.').map(Number);
+             const v2Parts = v2.split('.').map(Number);
+             for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+                const p1 = v1Parts[i] || 0;
+                const p2 = v2Parts[i] || 0;
+                if (p1 > p2) return 1;
+                if (p1 < p2) return -1;
+             }
+             return 0;
+        }
+
+        function showUpdateModal(data) {
+            document.getElementById('updateVersionNum').innerText = data.version;
+            document.getElementById('updateNotes').innerText = data.notes;
+            
+            // Platform smart logic to choose between APK or EXE
+            const isWindows = navigator.userAgent.indexOf("Win") !== -1;
+            const downloadLink = (isWindows && data.exeUrl) ? data.exeUrl : (data.apkUrl || data.downloadUrl || "#");
+            document.getElementById('updateDownloadBtn').href = downloadLink;
+            
+            const overlay = document.getElementById('updateOverlay');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+
+        // --- PWA & IOS INSTALL LOGIC ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+        
+        // Detects if device is already running as a standalone app
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        // Show custom install prompt for iOS Safari
+        if (isIos() && !isInStandaloneMode()) {
+            setTimeout(() => {
+                const iosPrompt = document.getElementById('iosPrompt');
+                if (iosPrompt) {
+                    iosPrompt.classList.remove('hidden');
+                    iosPrompt.classList.add('flex');
+                }
+            }, 3000);
+        }
+
+        // --- API INTEGRATION ---
+        async function apiCall(payload) {
+            showLoading(true);
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                showLoading(false);
+                return data;
+            } catch (err) {
+                showLoading(false);
+                showMsg('Error', 'Connection failed. Check network.', 'error');
+                return { success: false };
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = async () => {
+            // Force loading screen to show immediately upon launch
+            showLoading(true);
+            
+            // Check for updates first
+            checkUpdate();
+
+            applyTranslations();
+            
+            // Set Default Dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dashFilterDate').value = today;
+            document.getElementById('prodDate').value = today;
+            
+            const monthStr = today.substring(0, 7); // YYYY-MM
+            document.getElementById('dashFilterMonth').value = monthStr;
+            
+            // Populate Year Dropdown
+            const yrSelect = document.getElementById('dashFilterYear');
+            const currYear = new Date().getFullYear();
+            for(let y = currYear; y >= currYear - 5; y--) {
+                yrSelect.innerHTML += `<option value="${y}">${y}</option>`;
+            }
+
+            // Check system theme preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                if(!document.documentElement.classList.contains('dark')) toggleTheme();
+            }
+
+            // Sync with Cloud
+            const res = await apiCall({ action: 'init' });
+            if (res.success) {
+                db = res.data;
+                checkSession();
+            } else {
+                showMsg('Sync Error', 'Failed to load cloud database.', 'error');
+                // Unhide the login view so the user isn't stuck on a blank screen on error
+                document.getElementById('loginView').classList.remove('hidden');
+            }
+        };
+
+        // --- UI & THEME ---
+        function toggleLanguage() {
+            const langs = ['en', 'mr', 'hi'];
+            currentLang = langs[(langs.indexOf(currentLang) + 1) % langs.length];
+            document.getElementById('langDisplay').innerText = currentLang;
+            applyTranslations();
+            if(currentUser && document.getElementById('view-production').classList.contains('hidden') === false) loadProductionForm();
+            if(currentUser && document.getElementById('view-history').classList.contains('hidden') === false) loadHistory();
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    if (el.tagName === 'INPUT' && el.type === 'text') {} // Skip input placeholders
+                    else {
+                        const icon = el.querySelector('i');
+                        el.innerHTML = icon ? icon.outerHTML + ' ' + i18n[currentLang][key] : i18n[currentLang][key];
+                    }
+                }
+            });
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            document.getElementById('themeIcon').className = isDark ? "fa-solid fa-sun" : "fa-solid fa-moon";
+        }
+
+        function toggleMenu() {
+            const drawer = document.getElementById('navDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            if (drawer.classList.contains('-translate-x-full')) {
+                drawer.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                drawer.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // --- AUTHENTICATION ---
+        function checkAdminCode() {
+            const val = document.getElementById('loginCode').value.toUpperCase();
+            if(val === 'ADMIN') {
+                document.getElementById('passwordWrapper').classList.remove('hidden');
+                document.getElementById('adminPass').required = true;
+            } else {
+                document.getElementById('passwordWrapper').classList.add('hidden');
+                document.getElementById('adminPass').required = false;
+                document.getElementById('adminPass').value = '';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const code = document.getElementById('loginCode').value.trim().toUpperCase();
+            const pass = document.getElementById('adminPass').value;
+
+            if (code === 'ADMIN') {
+                if (pass === '87654321') {
+                    login({ id: "admin-0", name: "Super Admin", role: "admin", code: "ADMIN" });
+                } else {
+                    showMsg('Error', 'Invalid Admin Password', 'error');
+                }
+            } else {
+                // Find in db
+                const user = db.users.find(u => u.code === code);
+                if (user) {
+                    login(user);
+                } else {
+                    showMsg('Access Denied', 'Invalid Unique Code. Please contact Admin.', 'error');
+                }
+            }
+        }
+
+        function login(userData) {
+            currentUser = userData;
+            localStorage.setItem('prodflow_session', JSON.stringify(userData));
+            
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('appView').classList.remove('hidden');
+            document.getElementById('menuBtn').classList.remove('hidden');
+            
+            document.getElementById('drawerUserName').innerText = currentUser.name;
+            document.getElementById('drawerUserCode').innerText = currentUser.code;
+            
+            buildMenu();
+            
+            if (currentUser.role === 'admin') navigate('dashboard');
+            else if (currentUser.role === 'manager') navigate('jobs');
+            else navigate('production');
+        }
+
+        function checkSession() {
+            const saved = localStorage.getItem('prodflow_session');
+            if (saved) {
+                login(JSON.parse(saved));
+            } else {
+                // Unhide the login view if no saved session was found
+                document.getElementById('loginView').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('prodflow_session');
+            currentUser = null;
+            document.getElementById('appView').classList.add('hidden');
+            document.getElementById('menuBtn').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+            
+            // Reset forms
+            document.getElementById('loginCode').value = '';
+            document.getElementById('adminPass').value = '';
+            document.getElementById('passwordWrapper').classList.add('hidden');
+            
+            toggleMenu(); // close drawer
+        }
+
+        // --- NAVIGATION ---
+        function buildMenu() {
+            const nav = document.getElementById('drawerLinks');
+            nav.innerHTML = ''; 
+            
+            const btnClass = "flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700";
+            
+            if (currentUser.role === 'admin') {
+                nav.innerHTML += `<button onclick="navigate('dashboard')" id="nav-dashboard" class="${btnClass}"><i class="fa-solid fa-chart-simple w-6 text-center text-blue-500"></i> <span data-i18n="dashboard">Dashboard</span></button>`;
+                nav.innerHTML += `<button onclick="navigate('users')" id="nav-users" class="${btnClass}"><i class="fa-solid fa-users w-6 text-center text-blue-500"></i> <span data-i18n="users">Manage Users</span></button>`;
+            }
+            if (['admin', 'manager'].includes(currentUser.role)) {
+                nav.innerHTML += `<button onclick="navigate('jobs')" id="nav-jobs" class="${btnClass}"><i class="fa-solid fa-briefcase w-6 text-center text-blue-500"></i> <span data-i18n="jobs">Manage Jobs</span></button>`;
+            }
+            nav.innerHTML += `<button onclick="navigate('production')" id="nav-production" class="${btnClass}"><i class="fa-solid fa-check-circle w-6 text-center text-blue-500"></i> <span data-i18n="production">Production Entry</span></button>`;
+            nav.innerHTML += `<button onclick="navigate('history')" id="nav-history" class="${btnClass}"><i class="fa-solid fa-clock-rotate-left w-6 text-center text-blue-500"></i> <span data-i18n="history">Entries History</span></button>`;
+            
+            applyTranslations();
+        }
+
+        function navigate(viewName) {
+            ['dashboard', 'users', 'jobs', 'production', 'history'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if(el) el.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('#drawerLinks button').forEach(btn => {
+                btn.className = "flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700";
+            });
+
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${viewName}`);
+            if(activeBtn) {
+                activeBtn.className = "flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-colors bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-blue-400";
+            }
+
+            if(viewName === 'dashboard') loadDashboard();
+            if(viewName === 'users') loadUsers();
+            if(viewName === 'jobs') loadJobs();
+            if(viewName === 'production') loadProductionForm();
+            if(viewName === 'history') loadHistory();
+            
+            toggleMenu(); // close drawer automatically
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function setDashboardTimeframe(tf) {
+            selectedTimeframe = tf;
+            document.querySelectorAll('.tf-btn').forEach(btn => {
+                btn.className = "px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn";
+            });
+            document.getElementById(`tf-${tf}`).className = "px-4 py-1.5 rounded-md text-sm font-medium capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn";
+            
+            document.getElementById('filter-date-wrapper').classList.add('hidden');
+            document.getElementById('filter-month-wrapper').classList.add('hidden');
+            document.getElementById('filter-year-wrapper').classList.add('hidden');
+
+            if(tf === 'daily' || tf === 'weekly') document.getElementById('filter-date-wrapper').classList.remove('hidden');
+            if(tf === 'monthly') document.getElementById('filter-month-wrapper').classList.remove('hidden');
+            if(tf === 'yearly') document.getElementById('filter-year-wrapper').classList.remove('hidden');
+
+            loadDashboard();
+        }
+
+        function loadDashboard() {
+            const empSelect = document.getElementById('dashFilterEmployee');
+            // Populate Employee dropdown if empty
+            if (empSelect.options.length <= 1) {
+                db.users.forEach(u => empSelect.innerHTML += `<option value="${u.id}">${u.name}</option>`);
+            }
+            
+            const selectedEmp = empSelect.value;
+            let filteredLogs = db.logs;
+
+            // Apply Employee Filter
+            if (selectedEmp !== 'ALL') {
+                filteredLogs = filteredLogs.filter(log => String(log.userId) === String(selectedEmp));
+            }
+
+            // Apply Date/Timeframe Filter
+            if (selectedTimeframe === 'daily') {
+                const targetDate = document.getElementById('dashFilterDate').value;
+                filteredLogs = filteredLogs.filter(log => log.dateStr === targetDate);
+            } 
+            else if (selectedTimeframe === 'weekly') {
+                const baseDate = new Date(document.getElementById('dashFilterDate').value);
+                const pastDate = new Date(baseDate);
+                pastDate.setDate(baseDate.getDate() - 7);
+                filteredLogs = filteredLogs.filter(log => {
+                    const logD = new Date(log.dateStr);
+                    return logD >= pastDate && logD <= baseDate;
+                });
+            }
+            else if (selectedTimeframe === 'monthly') {
+                const targetMonth = document.getElementById('dashFilterMonth').value; // YYYY-MM
+                filteredLogs = filteredLogs.filter(log => log.dateStr && log.dateStr.startsWith(targetMonth));
+            }
+            else if (selectedTimeframe === 'yearly') {
+                const targetYear = document.getElementById('dashFilterYear').value;
+                filteredLogs = filteredLogs.filter(log => log.dateStr && log.dateStr.startsWith(targetYear));
+            }
+
+            // Calculate totals
+            let totalQty = filteredLogs.reduce((sum, log) => sum + parseInt(log.qty || 0), 0);
+            let uniqueJobs = new Set(filteredLogs.map(l => l.jobId)).size;
+
+            document.getElementById('dashTotalQty').innerHTML = `${totalQty} <span class="text-sm font-normal text-gray-500">units</span>`;
+            document.getElementById('dashTotalJobs').innerText = uniqueJobs;
+        }
+
+        // --- USERS ---
+        function loadUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            db.users.forEach(u => {
+                let badgeClass = "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
+                if(u.role === 'manager') badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300";
+                if(u.role === 'supervisor') badgeClass = "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300";
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4">${u.name}</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold uppercase ${badgeClass}">${u.role}</span></td>
+                        <td class="p-4 font-mono font-bold text-gray-600 dark:text-gray-400">${u.code}</td>
+                        <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="openEditUserModal('${u.id}')" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mr-3"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="confirmDeleteUser('${u.id}')" class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function generateUser(e) {
+            e.preventDefault();
+            const name = document.getElementById('newUserName').value;
+            const role = document.getElementById('newUserRole').value;
+            
+            let prefix = 'EMP';
+            if (role === 'manager') prefix = 'MGR';
+            if (role === 'supervisor') prefix = 'SUP';
+            
+            const newCode = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+            const newUser = { id: `U${Date.now()}`, name, role, code: newCode };
+            
+            const res = await apiCall({ action: 'addUser', user: newUser });
+            if (res.success) {
+                db.users.push(newUser);
+                document.getElementById('newUserName').value = '';
+                document.getElementById('newCodeDisplay').innerText = newCode;
+                document.getElementById('codeResult').classList.remove('hidden');
+                loadUsers();
+            }
+        }
+
+        // Edit User Logic
+        function openEditUserModal(userId) {
+            const user = db.users.find(u => String(u.id) === String(userId));
+            if(!user) return;
+
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUserName').value = user.name;
+            document.getElementById('editUserRole').value = user.role;
+
+            document.getElementById('editUserModal').classList.remove('hidden');
+            document.getElementById('editUserModal').classList.add('flex');
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+            document.getElementById('editUserModal').classList.remove('flex');
+        }
+
+        async function saveUserEdit(e) {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const userIdx = db.users.findIndex(u => String(u.id) === String(id));
+            
+            if(userIdx > -1) {
+                const updatedUser = {
+                    ...db.users[userIdx],
+                    name: document.getElementById('editUserName').value,
+                    role: document.getElementById('editUserRole').value
+                };
+                
+                const res = await apiCall({ action: 'editUser', user: updatedUser });
+                if(res.success) {
+                    db.users[userIdx] = updatedUser;
+                    closeEditUserModal();
+                    loadUsers();
+                    showMsg('Success', 'User updated successfully.', 'success');
+                }
+            }
+        }
+
+        // Delete User Logic
+        function confirmDeleteUser(userId) {
+            showMsg('Delete User?', 'Are you sure you want to permanently delete this user? They will no longer be able to log in.', 'warning', [
+                { text: 'Cancel', class: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300', action: closeMsg },
+                { text: 'Delete', class: 'bg-red-600 text-white', action: () => executeDeleteUser(userId) }
+            ]);
+        }
+
+        async function executeDeleteUser(userId) {
+            closeMsg();
+            const res = await apiCall({ action: 'deleteUser', userId: userId });
+            if(res.success) {
+                db.users = db.users.filter(u => String(u.id) !== String(userId));
+                loadUsers();
+                showMsg('Deleted', 'User removed successfully.', 'success');
+            }
+        }
+
+        // --- JOBS ---
+        function loadJobs() {
+            const list = document.getElementById('jobsList');
+            list.innerHTML = '';
+            db.jobs.forEach(j => {
+                list.innerHTML += `
+                    <div class="p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow">
+                        <h4 class="font-bold text-lg text-blue-600 dark:text-blue-400">${j.name}</h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">${j.desc}</p>
+                    </div>
+                `;
+            });
+        }
+
+        async function addJob(e) {
+            e.preventDefault();
+            const name = document.getElementById('newJobName').value;
+            const desc = document.getElementById('newJobDesc').value;
+            const newJob = { id: `J${Date.now()}`, name, desc };
+            
+            const res = await apiCall({ action: 'addJob', job: newJob });
+            if(res.success) {
+                db.jobs.push(newJob);
+                document.getElementById('newJobName').value = '';
+                document.getElementById('newJobDesc').value = '';
+                loadJobs();
+                showMsg('Success', i18n[currentLang]['successMsg'] || 'Job Added!', 'success');
+            }
+        }
+
+        // --- PRODUCTION ---
+        function loadProductionForm() {
+            // Load Jobs
+            const jobSelect = document.getElementById('prodJobSelect');
+            jobSelect.innerHTML = `<option value="" disabled selected>-- Select Job --</option>`;
+            db.jobs.forEach(j => jobSelect.innerHTML += `<option value="${j.id}">${j.name}</option>`);
+
+            // Load Employees (If Admin/Manager/Sup)
+            const empWrapper = document.getElementById('productionEmployeeWrapper');
+            if (['admin', 'manager', 'supervisor'].includes(currentUser.role)) {
+                empWrapper.classList.remove('hidden');
+                const empSelect = document.getElementById('prodEmployeeSelect');
+                empSelect.innerHTML = `<option value="${currentUser.id}" selected>${i18n[currentLang]['selectEmployee'] || '-- Select Employee --'}</option>`;
+                db.users.forEach(u => {
+                    if(u.id !== currentUser.id) empSelect.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+                });
+            } else {
+                empWrapper.classList.add('hidden');
+            }
+        }
+
+        function setLogType(type) {
+            selectedLogType = type;
+            const activeClass = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 log-btn";
+            const inactiveClass = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 log-btn";
+            document.getElementById('logTypeHourly').className = type === 'hourly' ? activeClass : inactiveClass;
+            document.getElementById('logTypeDaily').className = type === 'daily' ? activeClass : inactiveClass;
+        }
+
+        function setTimeMethod(method) {
+            selectedTimeMethod = method;
+            const activeClass = "flex-1 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 time-btn";
+            const inactiveClass = "flex-1 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 time-btn";
+            
+            document.getElementById('timeMethodRange').className = method === 'range' ? activeClass : inactiveClass;
+            document.getElementById('timeMethodDuration').className = method === 'duration' ? activeClass : inactiveClass;
+            
+            document.getElementById('timeRangeInputs').classList.toggle('hidden', method !== 'range');
+            document.getElementById('timeDurationInput').classList.toggle('hidden', method !== 'duration');
+            
+            document.getElementById('prodStartTime').required = (method === 'range');
+            document.getElementById('prodEndTime').required = (method === 'range');
+            document.getElementById('prodDuration').required = (method === 'duration');
+        }
+
+        async function submitProduction(e) {
+            e.preventDefault();
+            const jobId = document.getElementById('prodJobSelect').value;
+            const qty = document.getElementById('prodQty').value;
+            const dateStr = document.getElementById('prodDate').value;
+            
+            if(!jobId) return showMsg('Wait', "Please select a job.", 'warning');
+
+            let finalUserId = currentUser.id;
+            if (['admin', 'manager', 'supervisor'].includes(currentUser.role)) {
+                finalUserId = document.getElementById('prodEmployeeSelect').value;
+            }
+
+            let trackingData = {};
+            if(selectedTimeMethod === 'range') {
+                trackingData = { method: 'range', startTime: document.getElementById('prodStartTime').value, endTime: document.getElementById('prodEndTime').value };
+            } else {
+                trackingData = { method: 'duration', hours: document.getElementById('prodDuration').value };
+            }
+
+            const newLog = {
+                id: `L${Date.now()}`, userId: finalUserId, jobId: jobId, qty: qty,
+                type: selectedLogType, dateStr: dateStr, timeData: trackingData, timestamp: new Date().toISOString()
+            };
+
+            const res = await apiCall({ action: 'addLog', log: newLog });
+            if(res.success) {
+                db.logs.push(newLog);
+                document.getElementById('prodQty').value = '';
+                document.getElementById('prodStartTime').value = '';
+                document.getElementById('prodEndTime').value = '';
+                document.getElementById('prodDuration').value = '';
+                showMsg('Success', i18n[currentLang]['successMsg'], 'success');
+            }
+        }
+
+        // --- HISTORY & EDITING ---
+        function loadHistory() {
+            const isManagerOrAbove = ['admin', 'manager', 'supervisor'].includes(currentUser.role);
+            
+            // Header
+            const header = document.getElementById('historyTableHeader');
+            header.innerHTML = `
+                <th class="p-4 font-semibold">${i18n[currentLang]['date']}</th>
+                ${isManagerOrAbove ? `<th class="p-4 font-semibold">${i18n[currentLang]['empName'] || 'Employee'}</th>` : ''}
+                <th class="p-4 font-semibold">${i18n[currentLang]['jobName']}</th>
+                <th class="p-4 font-semibold">${i18n[currentLang]['qty']}</th>
+                <th class="p-4 font-semibold text-right">${i18n[currentLang]['action']}</th>
+            `;
+
+            // Body
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            
+            // Filter logs based on role
+            let myLogs = db.logs;
+            if(!isManagerOrAbove) {
+                myLogs = myLogs.filter(l => String(l.userId) === String(currentUser.id));
+            }
+
+            // Sort newest first
+            myLogs.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            myLogs.forEach(l => {
+                const jobName = db.jobs.find(j => j.id === l.jobId)?.name || 'Unknown';
+                const empName = db.users.find(u => String(u.id) === String(l.userId))?.name || 'Admin';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 whitespace-nowrap">${l.dateStr}</td>
+                        ${isManagerOrAbove ? `<td class="p-4 font-medium">${empName}</td>` : ''}
+                        <td class="p-4 text-blue-600 dark:text-blue-400 font-medium">${jobName}</td>
+                        <td class="p-4 font-bold">${l.qty}</td>
+                        <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="openEditModal('${l.id}')" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mr-3"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="confirmDelete('${l.id}')" class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Edit Modal
+        function openEditModal(logId) {
+            const log = db.logs.find(l => String(l.id) === String(logId));
+            if(!log) return;
+
+            document.getElementById('editLogId').value = log.id;
+            document.getElementById('editDate').value = log.dateStr;
+            document.getElementById('editQty').value = log.qty;
+
+            const jobSelect = document.getElementById('editJob');
+            jobSelect.innerHTML = '';
+            db.jobs.forEach(j => {
+                const selected = String(j.id) === String(log.jobId) ? 'selected' : '';
+                jobSelect.innerHTML += `<option value="${j.id}" ${selected}>${j.name}</option>`;
+            });
+
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+        }
+
+        async function saveEdit(e) {
+            e.preventDefault();
+            const id = document.getElementById('editLogId').value;
+            const logIdx = db.logs.findIndex(l => String(l.id) === String(id));
+            if(logIdx > -1) {
+                const updatedLog = {
+                    ...db.logs[logIdx],
+                    dateStr: document.getElementById('editDate').value,
+                    jobId: document.getElementById('editJob').value,
+                    qty: document.getElementById('editQty').value
+                };
+                
+                const res = await apiCall({ action: 'editLog', log: updatedLog });
+                if(res.success) {
+                    db.logs[logIdx] = updatedLog;
+                    closeEditModal();
+                    loadHistory();
+                    showMsg('Success', 'Entry updated.', 'success');
+                }
+            }
+        }
+
+        // Custom Confirm Delete
+        function confirmDelete(logId) {
+            showMsg('Delete Entry?', 'Are you sure you want to permanently delete this record?', 'warning', [
+                { text: 'Cancel', class: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300', action: closeMsg },
+                { text: 'Delete', class: 'bg-red-600 text-white', action: () => executeDelete(logId) }
+            ]);
+        }
+
+        async function executeDelete(logId) {
+            closeMsg();
+            const res = await apiCall({ action: 'deleteLog', logId: logId });
+            if(res.success) {
+                db.logs = db.logs.filter(l => String(l.id) !== String(logId));
+                loadHistory();
+                showMsg('Deleted', 'Entry removed.', 'success');
+            }
+        }
+
+        // Custom Message Box API
+        function showMsg(title, desc, type='info', buttons=null) {
+            document.getElementById('msgTitle').innerText = title;
+            document.getElementById('msgDesc').innerText = desc;
+            
+            const iconEl = document.getElementById('msgIcon');
+            if(type === 'success') { iconEl.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400"; iconEl.innerHTML = '<i class="fa-solid fa-check"></i>'; }
+            else if(type === 'warning') { iconEl.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400"; iconEl.innerHTML = '<i class="fa-solid fa-exclamation"></i>'; }
+            else if(type === 'error') { iconEl.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"; iconEl.innerHTML = '<i class="fa-solid fa-times"></i>'; }
+            else { iconEl.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"; iconEl.innerHTML = '<i class="fa-solid fa-info"></i>'; }
+
+            const btnContainer = document.getElementById('msgButtons');
+            btnContainer.innerHTML = '';
+            
+            if(!buttons) {
+                buttons = [{ text: 'OK', class: 'bg-blue-600 text-white w-full', action: closeMsg }];
+            }
+            
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = `px-6 py-2 rounded-xl font-bold transition-colors ${btn.class}`;
+                b.innerText = btn.text;
+                b.onclick = btn.action;
+                btnContainer.appendChild(b);
+            });
+
+            document.getElementById('msgModal').classList.remove('hidden');
+            document.getElementById('msgModal').classList.add('flex');
+        }
+
+        function closeMsg() {
+            document.getElementById('msgModal').classList.add('hidden');
+            document.getElementById('msgModal').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
