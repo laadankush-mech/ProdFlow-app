@@ -2,16 +2,22 @@
 <html lang="en" class="transition-colors duration-300">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Management App</title>
-    
-    <!-- PWA & iOS Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ProdFlow</title>
+
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2563eb">
+
+    <!-- PWA: iOS support -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ProdFlow">
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.webp">
+
+    <!-- PWA: Android/Chrome icon -->
+    <link rel="icon" type="image/webp" sizes="192x192" href="./icons/icon-192.webp">
+    <link rel="icon" type="image/webp" sizes="512x512" href="./icons/icon-512.webp">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,6 +35,13 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         .hidden { display: none !important; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin { animation: spin 0.8s linear infinite; display: inline-block; }
+        /* Button disabled state during loading */
+        button:disabled { cursor: not-allowed; opacity: 0.8; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -38,37 +51,11 @@
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
+        /* Respect iOS safe areas (notch / home indicator) */
+        body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
-
-    <!-- UPDATE OVERLAY (Highest z-index) -->
-    <div id="updateOverlay" class="fixed inset-0 bg-black bg-opacity-80 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm fade-in">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-blue-500">
-            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-                <i class="fa-solid fa-cloud-arrow-down"></i>
-            </div>
-            <h3 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Update Required</h3>
-            <p class="text-gray-600 dark:text-gray-300 mb-4">Version <span id="updateVersionNum" class="font-bold text-blue-600"></span> is available. Please update your app to continue.</p>
-            <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-sm text-left text-gray-500 mb-6 border border-gray-200 dark:border-gray-700">
-                <strong class="text-gray-800 dark:text-gray-200">Release Notes:</strong><br/>
-                <span id="updateNotes" class="mt-1 block"></span>
-            </div>
-            <a id="updateDownloadBtn" href="#" target="_blank" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg active:scale-95">
-                Download Update
-            </a>
-        </div>
-    </div>
-
-    <!-- iOS PWA INSTALL PROMPT -->
-    <div id="iosPrompt" class="fixed bottom-4 left-4 right-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl border border-blue-500 z-[300] hidden flex-col items-center text-center fade-in">
-        <button onclick="document.getElementById('iosPrompt').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-times text-xl"></i></button>
-        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-3">
-            <i class="fa-solid fa-arrow-up-from-bracket"></i>
-        </div>
-        <h3 class="font-bold text-lg text-gray-800 dark:text-white">Install ProdFlow on iPhone</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">Tap the <b class="text-blue-600">Share</b> button at the bottom of Safari, then select <b class="text-blue-600">"Add to Home Screen"</b> to install this app.</p>
-    </div>
 
     <!-- HEADER -->
     <header class="bg-blue-600 dark:bg-gray-900 text-white p-4 shadow-md sticky top-0 z-40 transition-colors duration-300">
@@ -153,7 +140,12 @@
             
             <!-- Dashboard View -->
             <div id="view-dashboard" class="hidden space-y-6 fade-in">
-                <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-chart-simple text-blue-500"></i> <span data-i18n="dashboard">Dashboard</span></h2>
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <h2 class="text-2xl font-bold flex items-center gap-2 text-gray-800 dark:text-white"><i class="fa-solid fa-chart-simple text-blue-500"></i> <span data-i18n="dashboard">Dashboard</span></h2>
+                    <button onclick="refreshData()" id="refreshBtn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors text-sm">
+                        <i class="fa-solid fa-rotate" id="refreshIcon"></i> <span data-i18n="refresh">Refresh</span>
+                    </button>
+                </div>
                 
                 <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                     <div class="flex flex-wrap items-center gap-4">
@@ -201,6 +193,27 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-4 sm:p-6 pb-0">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="productionData">Production Data</h3>
+                    </div>
+                    <div class="overflow-x-auto custom-scroll p-4 sm:p-6 pt-2">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm">
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="empName">Employee Name</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="jobName">Job Name</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="startTime">Start Time</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="endTime">End Time</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="qty">Quantity Produced</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashProdTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Users View -->
@@ -268,7 +281,20 @@
                         </div>
                     </form>
                 </div>
-                <div id="jobsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="jobsTableWrap" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto custom-scroll">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm">
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="jobName">Job Name</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="jobDesc">Job Description</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300 text-right" data-i18n="action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobsList" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- Production View -->
@@ -308,12 +334,7 @@
                         </div>
                         
                         <div class="sm:col-span-2">
-                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="timeMethod">Time Entry Method</label>
-                            <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl mb-4">
-                                <button type="button" onclick="setTimeMethod('range')" id="timeMethodRange" class="flex-1 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 time-btn" data-i18n="timeRange">Start/End Time</button>
-                                <button type="button" onclick="setTimeMethod('duration')" id="timeMethodDuration" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 time-btn" data-i18n="duration">Total Hours</button>
-                            </div>
-                            
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200" data-i18n="timeMethod">Time Entry</label>
                             <div id="timeRangeInputs" class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="startTime">Start Time</label>
@@ -323,11 +344,6 @@
                                     <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="endTime">End Time</label>
                                     <input type="time" id="prodEndTime" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
-                            </div>
-
-                            <div id="timeDurationInput" class="hidden">
-                                <label class="block text-sm font-medium mb-1 opacity-80" data-i18n="durationHours">Total Hours</label>
-                                <input type="number" step="0.25" min="0.25" id="prodDuration" placeholder="e.g. 8" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
                             </div>
                         </div>
                     </div>
@@ -379,6 +395,16 @@
                     <label class="block text-sm font-semibold mb-1" data-i18n="qty">Quantity</label>
                     <input type="number" id="editQty" required min="1" class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1" data-i18n="startTime">Start Time</label>
+                        <input type="time" id="editStartTime" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1" data-i18n="endTime">End Time</label>
+                        <input type="time" id="editEndTime" required onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                    </div>
+                </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
                     <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Save Changes</button>
@@ -416,6 +442,31 @@
         </div>
     </div>
 
+    <!-- CUSTOM EDIT JOB MODAL -->
+    <div id="editJobModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden items-center justify-center fade-in">
+        <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="editJob">Edit Job</h3>
+                <button onclick="closeEditJobModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="editJobForm" onsubmit="saveJobEdit(event)" class="space-y-4">
+                <input type="hidden" id="editJobId">
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="jobName">Job Name</label>
+                    <input type="text" id="editJobName" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1" data-i18n="jobDesc">Job Description</label>
+                    <input type="text" id="editJobDesc" required class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeEditJobModal()" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- CUSTOM CONFIRM/ALERT MODAL -->
     <div id="msgModal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] hidden items-center justify-center fade-in">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 border border-gray-100 dark:border-gray-700 text-center">
@@ -439,9 +490,6 @@
         // CONFIGURATION: APPS SCRIPT & APK UPDATE OTA GIST
         // ---------------------------------------------------------
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZTnq-WjYe9urm6ir2fPWIAwrTU51FugsBClWIe0egoa60H0-zX48Ty-jJwKM2zd7S/exec';
-        
-        const APP_VERSION = "1.0.1"; // Increment this when building a new APK
-        const UPDATE_GIST_URL = "https://gist.githubusercontent.com/laadankush-mech/349aebc0cb52ed932c0fc1aaa66c8e3c/raw/update.json";
 
         // --- STATE ---
         let db = { users: [], jobs: [], logs: [] };
@@ -449,7 +497,6 @@
         let currentLang = 'en';
         let selectedLogType = 'hourly';
         let selectedTimeframe = 'daily';
-        let selectedTimeMethod = 'range';
 
         // --- DICTIONARY (i18n) ---
         const i18n = {
@@ -458,103 +505,71 @@
                 dashboard: "Dashboard", users: "Manage Users", jobs: "Manage Jobs", production: "Production Entry", history: "Entries History",
                 daily: "Daily", weekly: "Weekly", monthly: "Monthly", yearly: "Yearly", hourly: "Hourly",
                 totalProd: "Total Production", activeJobs: "Active Jobs", addUser: "Add User", empName: "Employee Name", role: "Role", generateCode: "Generate Code", codeSuccess: "Code Generated Successfully!", accessCode: "Access Code",
-                addJob: "Add New Job", jobName: "Job Name", jobDesc: "Job Description", addJobBtn: "+ Add Job",
+                addJob: "Add New Job", jobName: "Job Name", jobDesc: "Job Description", addJobBtn: "+ Add Job", editJob: "Edit Job",
                 qty: "Quantity Produced", logType: "Log Type", submit: "Submit Entry", successMsg: "Entry submitted successfully!",
-                timeMethod: "Time Entry Method", timeRange: "Start/End Time", duration: "Total Hours", startTime: "Start Time", endTime: "End Time", durationHours: "Total Hours",
-                date: "Date", action: "Action", editEntry: "Edit Entry", selectEmployee: "-- Select Employee --"
+                timeMethod: "Time Entry", timeRange: "Start/End Time", duration: "Total Hours", startTime: "Start Time", endTime: "End Time", durationHours: "Total Hours",
+                date: "Date", action: "Action", editEntry: "Edit Entry", selectEmployee: "-- Select Employee --",
+                refresh: "Refresh", refreshed: "Refreshed", productionData: "Production Data"
             },
             mr: {
                 appTitle: "प्रॉडफ्लो", secureLogin: "सुरक्षित लॉगिन", enterCode: "युनिक कोड टाका", password: "अॅडमिन पासवर्ड", login: "लॉग इन करा", logout: "बाहेर पडा", loggedInAs: "लॉग इन:",
                 dashboard: "डॅशबोर्ड", users: "वापरकर्ते व्यवस्थापन", jobs: "कामे व्यवस्थापन", production: "उत्पादन नोंद", history: "नोंदींचा इतिहास",
                 daily: "दैनिक", weekly: "साप्ताहिक", monthly: "मासिक", yearly: "वार्षिक", hourly: "तासनिहाय",
                 totalProd: "एकूण उत्पादन", activeJobs: "सक्रिय कामे", addUser: "वापरकर्ता जोडा", empName: "कर्मचाऱ्याचे नाव", role: "पद (Role)", generateCode: "कोड तयार करा", codeSuccess: "कोड यशस्वीरित्या तयार झाला!", accessCode: "अॅक्सेस कोड",
-                addJob: "नवीन काम जोडा", jobName: "कामाचे नाव", jobDesc: "कामाचे वर्णन", addJobBtn: "+ काम जोडा",
+                addJob: "नवीन काम जोडा", jobName: "कामाचे नाव", jobDesc: "कामाचे वर्णन", addJobBtn: "+ काम जोडा", editJob: "काम संपादित करा",
                 qty: "उत्पादित संख्या", logType: "नोंद प्रकार", submit: "सबमिट करा", successMsg: "नोंद यशस्वीरित्या सबमिट केली!",
-                timeMethod: "वेळ नोंदवण्याची पद्धत", timeRange: "प्रारंभ/समाप्ती वेळ", duration: "एकूण तास", startTime: "सुरुवातीची वेळ", endTime: "समाप्तीची वेळ", durationHours: "एकूण तास",
-                date: "तारीख", action: "कृती", editEntry: "नोंद संपादित करा", selectEmployee: "-- कर्मचारी निवडा --"
+                timeMethod: "वेळ नोंद", timeRange: "प्रारंभ/समाप्ती वेळ", duration: "एकूण तास", startTime: "सुरुवातीची वेळ", endTime: "समाप्तीची वेळ", durationHours: "एकूण तास",
+                date: "तारीख", action: "कृती", editEntry: "नोंद संपादित करा", selectEmployee: "-- कर्मचारी निवडा --",
+                refresh: "रिफ्रेश करा", refreshed: "रिफ्रेश झाले", productionData: "उत्पादन डेटा"
             },
             hi: {
                 appTitle: "प्रोडफ्लो", secureLogin: "सुरक्षित लॉगिन", enterCode: "यूनिक कोड दर्ज करें", password: "एडमिन पासवर्ड", login: "लॉग इन करें", logout: "लॉग आउट", loggedInAs: "लॉग इन हैं:",
                 dashboard: "डैशबोर्ड", users: "उपयोगकर्ता प्रबंधन", jobs: "कार्य प्रबंधन", production: "उत्पादन प्रविष्टि", history: "प्रविष्टियों का इतिहास",
                 daily: "दैनिक", weekly: "साप्ताहिक", monthly: "मासिक", yearly: "वार्षिक", hourly: "प्रति घंटे",
                 totalProd: "कुल उत्पादन", activeJobs: "सक्रिय कार्य", addUser: "उपयोगकर्ता जोड़ें", empName: "कर्मचारी का नाम", role: "पद (Role)", generateCode: "कोड जनरेट करें", codeSuccess: "कोड सफलतापूर्वक जनरेट हुआ!", accessCode: "एक्सेस कोड",
-                addJob: "नया काम जोड़ें", jobName: "काम का नाम", jobDesc: "काम का विवरण", addJobBtn: "+ काम जोड़ें",
+                addJob: "नया काम जोड़ें", jobName: "काम का नाम", jobDesc: "काम का विवरण", addJobBtn: "+ काम जोड़ें", editJob: "काम संपादित करें",
                 qty: "उत्पादित मात्रा", logType: "लॉग प्रकार", submit: "सबमिट करें", successMsg: "प्रविष्टि सफलतापूर्वक सबमिट की गई!",
-                timeMethod: "समय दर्ज करने की विधि", timeRange: "शुरू/समाप्ति समय", duration: "कुल घंटे", startTime: "शुरू करने का समय", endTime: "समाप्ति का समय", durationHours: "कुल घंटे",
-                date: "तारीख", action: "कार्रवाई", editEntry: "प्रविष्टि संपादित करें", selectEmployee: "-- कर्मचारी चुनें --"
+                timeMethod: "समय प्रविष्टि", timeRange: "शुरू/समाप्ति समय", duration: "कुल घंटे", startTime: "शुरू करने का समय", endTime: "समाप्ति का समय", durationHours: "कुल घंटे",
+                date: "तारीख", action: "कार्रवाई", editEntry: "प्रविष्टि संपादित करें", selectEmployee: "-- कर्मचारी चुनें --",
+                refresh: "रिफ्रेश करें", refreshed: "रिफ्रेश हो गया", productionData: "उत्पादन डेटा"
             }
         };
 
-        // --- OTA UPDATE LOGIC ---
-        async function checkUpdate() {
-            try {
-                // Bypass browser cache with a timestamp
-                const res = await fetch(UPDATE_GIST_URL + '?t=' + new Date().getTime());
-                if (!res.ok) return;
-                const data = await res.json();
-                
-                // Compare fetched version vs APP_VERSION
-                if (compareVersions(data.version, APP_VERSION) > 0) {
-                    showUpdateModal(data);
-                }
-            } catch (e) {
-                console.log("Update check failed or device is offline", e);
-            }
-        }
-
-        function compareVersions(v1, v2) {
-             const v1Parts = v1.split('.').map(Number);
-             const v2Parts = v2.split('.').map(Number);
-             for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-                const p1 = v1Parts[i] || 0;
-                const p2 = v2Parts[i] || 0;
-                if (p1 > p2) return 1;
-                if (p1 < p2) return -1;
-             }
-             return 0;
-        }
-
-        function showUpdateModal(data) {
-            document.getElementById('updateVersionNum').innerText = data.version;
-            document.getElementById('updateNotes').innerText = data.notes;
-            
-            // Platform smart logic to choose between APK or EXE
-            const isWindows = navigator.userAgent.indexOf("Win") !== -1;
-            const downloadLink = (isWindows && data.exeUrl) ? data.exeUrl : (data.apkUrl || data.downloadUrl || "#");
-            document.getElementById('updateDownloadBtn').href = downloadLink;
-            
-            const overlay = document.getElementById('updateOverlay');
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-        }
-
-        // --- PWA & IOS INSTALL LOGIC ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
-            });
-        }
-
-        const isIos = () => {
-            const userAgent = window.navigator.userAgent.toLowerCase();
-            return /iphone|ipad|ipod/.test(userAgent);
-        };
-        
-        // Detects if device is already running as a standalone app
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-
-        // Show custom install prompt for iOS Safari
-        if (isIos() && !isInStandaloneMode()) {
-            setTimeout(() => {
-                const iosPrompt = document.getElementById('iosPrompt');
-                if (iosPrompt) {
-                    iosPrompt.classList.remove('hidden');
-                    iosPrompt.classList.add('flex');
-                }
-            }, 3000);
-        }
 
         // --- API INTEGRATION ---
+        // ── Button lock/loading helper (prevents double-click) ──────────────
+        // call setBtnLoading(btn, true, 'Saving...') before an async op,
+        // then setBtnLoading(btn, false) when done (or on error).
+        function setBtnLoading(btn, loading, label) {
+            if (!btn) return;
+            if (loading) {
+                btn.dataset.origText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin inline w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>${label || 'Saving...'}`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = btn.dataset.origText || btn.innerHTML;
+            }
+        }
+
+        // ── Success flash animation on a button ───────────────────────────────
+        function flashBtnSuccess(btn, label) {
+            if (!btn) return;
+            const orig = btn.dataset.origText || btn.innerHTML;
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="inline w-4 h-4 mr-1 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>${label || 'Saved!'}`;
+            btn.classList.add('bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.classList.remove('bg-green-600');
+            }, 1800);
+        }
+
         async function apiCall(payload) {
             showLoading(true);
             try {
@@ -576,14 +591,37 @@
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
+        // --- REFRESH WITH SERVER ---
+        async function refreshData() {
+            const icon = document.getElementById('refreshIcon');
+            if(icon) icon.classList.add('fa-spin');
+
+            const res = await apiCall({ action: 'init' });
+
+            if(icon) icon.classList.remove('fa-spin');
+
+            if(res.success) {
+                db = res.data;
+                // Reload whichever view is currently visible
+                if (!document.getElementById('view-dashboard').classList.contains('hidden')) loadDashboard();
+                if (!document.getElementById('view-users').classList.contains('hidden')) loadUsers();
+                if (!document.getElementById('view-jobs').classList.contains('hidden')) loadJobs();
+                if (!document.getElementById('view-production').classList.contains('hidden')) loadProductionForm();
+                if (!document.getElementById('view-history').classList.contains('hidden')) loadHistory();
+                showMsg('Success', i18n[currentLang]['refreshed'] || 'Refreshed', 'success');
+            }
+        }
+
         // --- INITIALIZATION ---
         window.onload = async () => {
             // Force loading screen to show immediately upon launch
             showLoading(true);
             
-            // Check for updates first
-            checkUpdate();
-
+            // Register PWA Service Worker (skip on Capacitor native shell)
+            if ('serviceWorker' in navigator && !window.Capacitor) {
+                navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW registration failed', e));
+            }
+            
             applyTranslations();
             
             // Set Default Dates
@@ -678,13 +716,18 @@
             const pass = document.getElementById('adminPass').value;
 
             if (code === 'ADMIN') {
-                if (pass === '87654321') {
-                    login({ id: "admin-0", name: "Super Admin", role: "admin", code: "ADMIN" });
+                // Verify admin password against Google Sheets — never stored locally
+                const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+                setBtnLoading(loginBtn, true, 'Verifying...');
+                const res = await apiCall({ action: 'verifyAdmin', password: pass });
+                setBtnLoading(loginBtn, false);
+                if (res.success) {
+                    login(res.user);
                 } else {
-                    showMsg('Error', 'Invalid Admin Password', 'error');
+                    showMsg('Error', res.message || 'Invalid Admin Password', 'error');
                 }
             } else {
-                // Find in db
+                // Find in db (employee / manager / supervisor)
                 const user = db.users.find(u => u.code === code);
                 if (user) {
                     login(user);
@@ -845,6 +888,34 @@
 
             document.getElementById('dashTotalQty').innerHTML = `${totalQty} <span class="text-sm font-normal text-gray-500">units</span>`;
             document.getElementById('dashTotalJobs').innerText = uniqueJobs;
+
+            // Populate Production Data table
+            const tbody = document.getElementById('dashProdTableBody');
+            tbody.innerHTML = '';
+
+            // Sort newest first
+            const sortedLogs = [...filteredLogs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            sortedLogs.forEach(l => {
+                const jobName = db.jobs.find(j => j.id === l.jobId)?.name || 'Unknown';
+                const empName = db.users.find(u => String(u.id) === String(l.userId))?.name || 'Admin';
+                const start = l.timeData?.startTime || '-';
+                const end = l.timeData?.endTime || '-';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 font-medium">${empName}</td>
+                        <td class="p-4 text-blue-600 dark:text-blue-400 font-medium">${jobName}</td>
+                        <td class="p-4 whitespace-nowrap">${start}</td>
+                        <td class="p-4 whitespace-nowrap">${end}</td>
+                        <td class="p-4 font-bold">${l.qty}</td>
+                    </tr>
+                `;
+            });
+
+            if(sortedLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No data</td></tr>`;
+            }
         }
 
         // --- USERS ---
@@ -872,16 +943,16 @@
 
         async function generateUser(e) {
             e.preventDefault();
-            const name = document.getElementById('newUserName').value;
+            const name = document.getElementById('newUserName').value.trim();
             const role = document.getElementById('newUserRole').value;
-            
+            if (!name) return;
+            const btn = e.target.querySelector('button[type="submit"]');
+            setBtnLoading(btn, true, 'Adding...');
             let prefix = 'EMP';
             if (role === 'manager') prefix = 'MGR';
             if (role === 'supervisor') prefix = 'SUP';
-            
             const newCode = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
             const newUser = { id: `U${Date.now()}`, name, role, code: newCode };
-            
             const res = await apiCall({ action: 'addUser', user: newUser });
             if (res.success) {
                 db.users.push(newUser);
@@ -889,6 +960,9 @@
                 document.getElementById('newCodeDisplay').innerText = newCode;
                 document.getElementById('codeResult').classList.remove('hidden');
                 loadUsers();
+                flashBtnSuccess(btn, 'User Added!');
+            } else {
+                setBtnLoading(btn, false);
             }
         }
 
@@ -956,27 +1030,103 @@
             list.innerHTML = '';
             db.jobs.forEach(j => {
                 list.innerHTML += `
-                    <div class="p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow">
-                        <h4 class="font-bold text-lg text-blue-600 dark:text-blue-400">${j.name}</h4>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">${j.desc}</p>
-                    </div>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 font-bold text-blue-600 dark:text-blue-400">${j.name}</td>
+                        <td class="p-4 text-sm text-gray-500 dark:text-gray-400">${j.desc}</td>
+                        <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="openEditJobModal('${j.id}')" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mr-3"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="confirmDeleteJob('${j.id}')" class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
                 `;
             });
+            if(db.jobs.length === 0) {
+                list.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-400">No jobs added yet</td></tr>`;
+            }
         }
 
         async function addJob(e) {
             e.preventDefault();
-            const name = document.getElementById('newJobName').value;
-            const desc = document.getElementById('newJobDesc').value;
+            const name = document.getElementById('newJobName').value.trim();
+            const desc = document.getElementById('newJobDesc').value.trim();
+            if (!name) return;
             const newJob = { id: `J${Date.now()}`, name, desc };
-            
+            const btn = e.target.querySelector('button[type="submit"]');
+            setBtnLoading(btn, true, 'Adding...');
             const res = await apiCall({ action: 'addJob', job: newJob });
             if(res.success) {
                 db.jobs.push(newJob);
                 document.getElementById('newJobName').value = '';
                 document.getElementById('newJobDesc').value = '';
                 loadJobs();
+                flashBtnSuccess(btn, 'Job Added!');
                 showMsg('Success', i18n[currentLang]['successMsg'] || 'Job Added!', 'success');
+            } else {
+                setBtnLoading(btn, false);
+            }
+        }
+
+        // Edit Job Logic
+        function openEditJobModal(jobId) {
+            const job = db.jobs.find(j => String(j.id) === String(jobId));
+            if(!job) return;
+
+            document.getElementById('editJobId').value = job.id;
+            document.getElementById('editJobName').value = job.name;
+            document.getElementById('editJobDesc').value = job.desc;
+
+            document.getElementById('editJobModal').classList.remove('hidden');
+            document.getElementById('editJobModal').classList.add('flex');
+        }
+
+        function closeEditJobModal() {
+            document.getElementById('editJobModal').classList.add('hidden');
+            document.getElementById('editJobModal').classList.remove('flex');
+        }
+
+        async function saveJobEdit(e) {
+            e.preventDefault();
+            const id = document.getElementById('editJobId').value;
+            const jobIdx = db.jobs.findIndex(j => String(j.id) === String(id));
+
+            if(jobIdx > -1) {
+                const btn = e.target.querySelector('button[type="submit"]');
+                setBtnLoading(btn, true, 'Saving...');
+                const updatedJob = {
+                    ...db.jobs[jobIdx],
+                    name: document.getElementById('editJobName').value,
+                    desc: document.getElementById('editJobDesc').value
+                };
+                const res = await apiCall({ action: 'editJob', job: updatedJob });
+                if(res.success) {
+                    db.jobs[jobIdx] = updatedJob;
+                    flashBtnSuccess(btn, 'Updated!');
+                    setTimeout(() => {
+                        closeEditJobModal();
+                        loadJobs();
+                    }, 900);
+                    showMsg('Success', 'Job updated successfully.', 'success');
+                } else {
+                    setBtnLoading(btn, false);
+                }
+            }
+        }
+
+        // Delete Job Logic
+        function confirmDeleteJob(jobId) {
+            showMsg('Delete Job?', 'Are you sure you want to permanently delete this job?', 'warning', [
+                { text: 'Cancel', class: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300', action: closeMsg },
+                { text: 'Delete', class: 'bg-red-600 text-white', action: () => executeDeleteJob(jobId) }
+            ]);
+        }
+
+        async function executeDeleteJob(jobId) {
+            closeMsg();
+            const res = await apiCall({ action: 'deleteJob', jobId: jobId });
+            if(res.success) {
+                db.jobs = db.jobs.filter(j => String(j.id) !== String(jobId));
+                loadJobs();
+                showMsg('Deleted', 'Job removed successfully.', 'success');
             }
         }
 
@@ -1009,22 +1159,6 @@
             document.getElementById('logTypeDaily').className = type === 'daily' ? activeClass : inactiveClass;
         }
 
-        function setTimeMethod(method) {
-            selectedTimeMethod = method;
-            const activeClass = "flex-1 py-2.5 rounded-lg text-sm font-bold bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 time-btn";
-            const inactiveClass = "flex-1 py-2.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 time-btn";
-            
-            document.getElementById('timeMethodRange').className = method === 'range' ? activeClass : inactiveClass;
-            document.getElementById('timeMethodDuration').className = method === 'duration' ? activeClass : inactiveClass;
-            
-            document.getElementById('timeRangeInputs').classList.toggle('hidden', method !== 'range');
-            document.getElementById('timeDurationInput').classList.toggle('hidden', method !== 'duration');
-            
-            document.getElementById('prodStartTime').required = (method === 'range');
-            document.getElementById('prodEndTime').required = (method === 'range');
-            document.getElementById('prodDuration').required = (method === 'duration');
-        }
-
         async function submitProduction(e) {
             e.preventDefault();
             const jobId = document.getElementById('prodJobSelect').value;
@@ -1032,18 +1166,21 @@
             const dateStr = document.getElementById('prodDate').value;
             
             if(!jobId) return showMsg('Wait', "Please select a job.", 'warning');
+            if(!qty || qty <= 0) return showMsg('Wait', "Please enter a valid quantity.", 'warning');
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            setBtnLoading(btn, true, 'Submitting...');
 
             let finalUserId = currentUser.id;
             if (['admin', 'manager', 'supervisor'].includes(currentUser.role)) {
                 finalUserId = document.getElementById('prodEmployeeSelect').value;
             }
 
-            let trackingData = {};
-            if(selectedTimeMethod === 'range') {
-                trackingData = { method: 'range', startTime: document.getElementById('prodStartTime').value, endTime: document.getElementById('prodEndTime').value };
-            } else {
-                trackingData = { method: 'duration', hours: document.getElementById('prodDuration').value };
-            }
+            const trackingData = {
+                method: 'range',
+                startTime: document.getElementById('prodStartTime').value,
+                endTime: document.getElementById('prodEndTime').value
+            };
 
             const newLog = {
                 id: `L${Date.now()}`, userId: finalUserId, jobId: jobId, qty: qty,
@@ -1056,8 +1193,10 @@
                 document.getElementById('prodQty').value = '';
                 document.getElementById('prodStartTime').value = '';
                 document.getElementById('prodEndTime').value = '';
-                document.getElementById('prodDuration').value = '';
+                flashBtnSuccess(btn, 'Entry Saved!');
                 showMsg('Success', i18n[currentLang]['successMsg'], 'success');
+            } else {
+                setBtnLoading(btn, false);
             }
         }
 
@@ -1071,6 +1210,8 @@
                 <th class="p-4 font-semibold">${i18n[currentLang]['date']}</th>
                 ${isManagerOrAbove ? `<th class="p-4 font-semibold">${i18n[currentLang]['empName'] || 'Employee'}</th>` : ''}
                 <th class="p-4 font-semibold">${i18n[currentLang]['jobName']}</th>
+                <th class="p-4 font-semibold">${i18n[currentLang]['startTime']}</th>
+                <th class="p-4 font-semibold">${i18n[currentLang]['endTime']}</th>
                 <th class="p-4 font-semibold">${i18n[currentLang]['qty']}</th>
                 <th class="p-4 font-semibold text-right">${i18n[currentLang]['action']}</th>
             `;
@@ -1091,12 +1232,16 @@
             myLogs.forEach(l => {
                 const jobName = db.jobs.find(j => j.id === l.jobId)?.name || 'Unknown';
                 const empName = db.users.find(u => String(u.id) === String(l.userId))?.name || 'Admin';
+                const start = l.timeData?.startTime || '-';
+                const end = l.timeData?.endTime || '-';
                 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                         <td class="p-4 whitespace-nowrap">${l.dateStr}</td>
                         ${isManagerOrAbove ? `<td class="p-4 font-medium">${empName}</td>` : ''}
                         <td class="p-4 text-blue-600 dark:text-blue-400 font-medium">${jobName}</td>
+                        <td class="p-4 whitespace-nowrap">${start}</td>
+                        <td class="p-4 whitespace-nowrap">${end}</td>
                         <td class="p-4 font-bold">${l.qty}</td>
                         <td class="p-4 text-right whitespace-nowrap">
                             <button onclick="openEditModal('${l.id}')" class="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mr-3"><i class="fa-solid fa-pen"></i></button>
@@ -1115,6 +1260,8 @@
             document.getElementById('editLogId').value = log.id;
             document.getElementById('editDate').value = log.dateStr;
             document.getElementById('editQty').value = log.qty;
+            document.getElementById('editStartTime').value = log.timeData?.startTime || '';
+            document.getElementById('editEndTime').value = log.timeData?.endTime || '';
 
             const jobSelect = document.getElementById('editJob');
             jobSelect.innerHTML = '';
@@ -1137,19 +1284,30 @@
             const id = document.getElementById('editLogId').value;
             const logIdx = db.logs.findIndex(l => String(l.id) === String(id));
             if(logIdx > -1) {
+                const btn = e.target.querySelector('button[type="submit"]');
+                setBtnLoading(btn, true, 'Saving...');
                 const updatedLog = {
                     ...db.logs[logIdx],
                     dateStr: document.getElementById('editDate').value,
                     jobId: document.getElementById('editJob').value,
-                    qty: document.getElementById('editQty').value
+                    qty: document.getElementById('editQty').value,
+                    timeData: {
+                        method: 'range',
+                        startTime: document.getElementById('editStartTime').value,
+                        endTime: document.getElementById('editEndTime').value
+                    }
                 };
-                
                 const res = await apiCall({ action: 'editLog', log: updatedLog });
                 if(res.success) {
                     db.logs[logIdx] = updatedLog;
-                    closeEditModal();
-                    loadHistory();
+                    flashBtnSuccess(btn, 'Updated!');
+                    setTimeout(() => {
+                        closeEditModal();
+                        loadHistory();
+                    }, 900);
                     showMsg('Success', 'Entry updated.', 'success');
+                } else {
+                    setBtnLoading(btn, false);
                 }
             }
         }
