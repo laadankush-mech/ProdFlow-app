@@ -13,11 +13,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ProdFlow">
-    <link rel="apple-touch-icon" href="./icons/icon-192.webp">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
     <!-- PWA: Android/Chrome icon -->
-    <link rel="icon" type="image/webp" sizes="192x192" href="./icons/icon-192.webp">
-    <link rel="icon" type="image/webp" sizes="512x512" href="./icons/icon-512.webp">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -172,6 +172,13 @@
                         <div class="flex-1 min-w-[200px]">
                             <select id="dashFilterEmployee" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none">
                                 <option value="ALL">-- All Employees --</option>
+                            </select>
+                        </div>
+
+                        <!-- Job Filter -->
+                        <div class="flex-1 min-w-[200px]">
+                            <select id="dashFilterJob" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none">
+                                <option value="ALL">-- All Jobs --</option>
                             </select>
                         </div>
                     </div>
@@ -537,6 +544,23 @@
 
 
         // --- API INTEGRATION ---
+        // ── Timezone-safe local date helpers ─────────────────────────────────
+        // NEVER use new Date().toISOString().split('T')[0] — that gives UTC date.
+        // Use localDateStr() everywhere we need today's date in YYYY-MM-DD local time.
+        function localDateStr(date) {
+            const d = date || new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // ISO timestamp but anchored to local midnight so cross-device sort is stable
+        function localTimestamp() {
+            return new Date().toLocaleString('sv-SE', { timeZoneName: 'short' })
+                .replace(' ', 'T').split(' ')[0] + 'Z_' + Date.now();
+        }
+
         // ── Button lock/loading helper (prevents double-click) ──────────────
         // call setBtnLoading(btn, true, 'Saving...') before an async op,
         // then setBtnLoading(btn, false) when done (or on error).
@@ -602,6 +626,11 @@
 
             if(res.success) {
                 db = res.data;
+                // Reset filter dropdowns so they repopulate with fresh data
+                const empSel = document.getElementById('dashFilterEmployee');
+                if (empSel) empSel.innerHTML = '<option value="ALL">-- All Employees --</option>';
+                const jobSel = document.getElementById('dashFilterJob');
+                if (jobSel) jobSel.innerHTML = '<option value="ALL">-- All Jobs --</option>';
                 // Reload whichever view is currently visible
                 if (!document.getElementById('view-dashboard').classList.contains('hidden')) loadDashboard();
                 if (!document.getElementById('view-users').classList.contains('hidden')) loadUsers();
@@ -624,8 +653,8 @@
             
             applyTranslations();
             
-            // Set Default Dates
-            const today = new Date().toISOString().split('T')[0];
+            // Set Default Dates — use local date, NOT toISOString() which gives UTC
+            const today = localDateStr();
             document.getElementById('dashFilterDate').value = today;
             document.getElementById('prodDate').value = today;
             
@@ -850,8 +879,15 @@
             if (empSelect.options.length <= 1) {
                 db.users.forEach(u => empSelect.innerHTML += `<option value="${u.id}">${u.name}</option>`);
             }
-            
+
+            const jobSelect = document.getElementById('dashFilterJob');
+            // Populate Job dropdown if empty (rebuild when jobs change)
+            if (jobSelect.options.length <= 1) {
+                db.jobs.forEach(j => jobSelect.innerHTML += `<option value="${j.id}">${j.name}</option>`);
+            }
+
             const selectedEmp = empSelect.value;
+            const selectedJob = jobSelect.value;
             let filteredLogs = db.logs;
 
             // Apply Employee Filter
@@ -859,27 +895,45 @@
                 filteredLogs = filteredLogs.filter(log => String(log.userId) === String(selectedEmp));
             }
 
+            // Apply Job Filter
+            if (selectedJob !== 'ALL') {
+                filteredLogs = filteredLogs.filter(log => String(log.jobId) === String(selectedJob));
+            }
+
             // Apply Date/Timeframe Filter
             if (selectedTimeframe === 'daily') {
-                const targetDate = document.getElementById('dashFilterDate').value;
-                filteredLogs = filteredLogs.filter(log => log.dateStr === targetDate);
+                const targetDate = document.getElementById('dashFilterDate').value; // YYYY-MM-DD local
+                filteredLogs = filteredLogs.filter(log => {
+                    // Normalize dateStr: take only the date part (handles ISO strings too)
+                    const logDate = (log.dateStr || '').substring(0, 10);
+                    return logDate === targetDate;
+                });
             } 
             else if (selectedTimeframe === 'weekly') {
-                const baseDate = new Date(document.getElementById('dashFilterDate').value);
+                // Parse YYYY-MM-DD as local date (not UTC) by replacing - with /
+                const baseStr = document.getElementById('dashFilterDate').value;
+                const baseDate = new Date(baseStr.replace(/-/g, '/'));
                 const pastDate = new Date(baseDate);
                 pastDate.setDate(baseDate.getDate() - 7);
                 filteredLogs = filteredLogs.filter(log => {
-                    const logD = new Date(log.dateStr);
+                    const ds = (log.dateStr || '').substring(0, 10);
+                    const logD = new Date(ds.replace(/-/g, '/'));
                     return logD >= pastDate && logD <= baseDate;
                 });
             }
             else if (selectedTimeframe === 'monthly') {
                 const targetMonth = document.getElementById('dashFilterMonth').value; // YYYY-MM
-                filteredLogs = filteredLogs.filter(log => log.dateStr && log.dateStr.startsWith(targetMonth));
+                filteredLogs = filteredLogs.filter(log => {
+                    const ds = (log.dateStr || '').substring(0, 10);
+                    return ds.startsWith(targetMonth);
+                });
             }
             else if (selectedTimeframe === 'yearly') {
                 const targetYear = document.getElementById('dashFilterYear').value;
-                filteredLogs = filteredLogs.filter(log => log.dateStr && log.dateStr.startsWith(targetYear));
+                filteredLogs = filteredLogs.filter(log => {
+                    const ds = (log.dateStr || '').substring(0, 10);
+                    return ds.startsWith(targetYear);
+                });
             }
 
             // Calculate totals
