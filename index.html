@@ -47,6 +47,10 @@
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes splashPop {
+            0%   { opacity: 0; transform: scale(0.7) translateY(12px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
         /* Custom scrollbar for history tables */
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -62,9 +66,7 @@
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <button onclick="toggleMenu()" id="menuBtn" class="hidden hover:text-blue-200 text-xl"><i class="fa-solid fa-bars"></i></button>
-                <div class="w-8 h-8 bg-white text-blue-600 rounded flex items-center justify-center font-bold text-xl">
-                    <i class="fa-solid fa-industry text-lg"></i>
-                </div>
+                <img src="./icons/icon-192.png" alt="ProdFlow" class="w-8 h-8 rounded-lg shadow-sm" style="object-fit:cover;">
                 <h1 class="text-xl font-bold" data-i18n="appTitle">ProdFlow</h1>
             </div>
             <div class="flex items-center gap-4">
@@ -109,9 +111,10 @@
         
         <!-- LOGIN SCREEN (Unified - Hidden initially to prevent flash) -->
         <div id="loginView" class="hidden max-w-md mx-auto mt-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden fade-in">
-            <div class="bg-blue-50 dark:bg-gray-900/50 p-6 text-center border-b border-gray-100 dark:border-gray-700">
-                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-md mb-4"><i class="fa-solid fa-fingerprint"></i></div>
-                <h2 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="secureLogin">Secure Login</h2>
+            <div class="bg-gradient-to-b from-blue-600 to-blue-700 p-8 text-center border-b border-blue-800">
+                <img src="./icons/icon-192.png" alt="ProdFlow" class="w-20 h-20 rounded-2xl shadow-xl mx-auto mb-4" style="border:3px solid rgba(255,255,255,0.3);">
+                <h1 class="text-2xl font-extrabold text-white tracking-tight">ProdFlow</h1>
+                <p class="text-blue-200 text-sm mt-1">Production Management System</p>
             </div>
             <div class="p-6">
                 <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
@@ -485,10 +488,17 @@
     </div>
 
     <!-- LOADING OVERLAY -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-blue-900 bg-opacity-90 z-[100] hidden flex-col items-center justify-center text-white fade-in">
-        <i class="fa-solid fa-circle-notch fa-spin text-5xl mb-4 text-blue-400"></i>
-        <h2 class="text-xl font-bold tracking-widest uppercase">Syncing Cloud...</h2>
-        <p class="text-sm text-blue-200 mt-2">Connecting to Google Sheets</p>
+    <div id="loadingOverlay" class="fixed inset-0 bg-blue-600 z-[100] hidden flex-col items-center justify-center text-white fade-in" style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#1e40af 100%);">
+        <!-- Logo -->
+        <div class="mb-5 drop-shadow-xl" style="animation:splashPop 0.5s cubic-bezier(.34,1.56,.64,1) both;">
+            <img src="./icons/icon-192.png" alt="ProdFlow" class="w-24 h-24 rounded-2xl shadow-2xl" style="border:3px solid rgba(255,255,255,0.25);">
+        </div>
+        <!-- Welcome text -->
+        <h1 class="text-3xl font-extrabold tracking-tight mb-1" style="animation:splashPop 0.5s 0.1s cubic-bezier(.34,1.56,.64,1) both;opacity:0;">Welcome to ProdFlow</h1>
+        <p class="text-blue-200 text-sm mb-8 font-medium" style="animation:splashPop 0.5s 0.18s cubic-bezier(.34,1.56,.64,1) both;opacity:0;">Production Management System</p>
+        <!-- Spinner -->
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-300" style="animation:splashPop 0.5s 0.28s cubic-bezier(.34,1.56,.64,1) both;opacity:0;"></i>
+        <p class="text-xs text-blue-300 mt-3 tracking-widest uppercase" style="animation:splashPop 0.5s 0.32s cubic-bezier(.34,1.56,.64,1) both;opacity:0;">Connecting to Google Sheets...</p>
     </div>
 
     <!-- ================= JAVASCRIPT LOGIC ================= -->
