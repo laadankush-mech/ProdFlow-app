@@ -13,11 +13,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ProdFlow">
-    <link rel="apple-touch-icon" href="./icons/icon-192.webp">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
     <!-- PWA: Android/Chrome icon -->
-    <link rel="icon" type="image/webp" sizes="192x192" href="./icons/icon-192.webp">
-    <link rel="icon" type="image/webp" sizes="512x512" href="./icons/icon-512.webp">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,6 +42,12 @@
         .animate-spin { animation: spin 0.8s linear infinite; display: inline-block; }
         /* Button disabled state during loading */
         button:disabled { cursor: not-allowed; opacity: 0.8; }
+        /* Force all inputs/selects to never overflow their container */
+        input[type="date"], input[type="month"], input[type="time"], select {
+            box-sizing: border-box;
+            max-width: 100%;
+            min-width: 0;
+        }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -66,7 +72,7 @@
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <button onclick="toggleMenu()" id="menuBtn" class="hidden hover:text-blue-200 text-xl"><i class="fa-solid fa-bars"></i></button>
-                <img src="./icons/icon-192.webp" alt="ProdFlow" class="w-8 h-8 rounded-lg shadow-sm" style="object-fit:cover;">
+                <img src="./icons/icon-192.png" alt="ProdFlow" class="w-8 h-8 rounded-lg shadow-sm" style="object-fit:cover;">
                 <h1 class="text-xl font-bold" data-i18n="appTitle">ProdFlow</h1>
             </div>
             <div class="flex items-center gap-4">
@@ -112,7 +118,7 @@
         <!-- LOGIN SCREEN (Unified - Hidden initially to prevent flash) -->
         <div id="loginView" class="hidden max-w-md mx-auto mt-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden fade-in">
             <div class="bg-gradient-to-b from-blue-600 to-blue-700 p-8 text-center border-b border-blue-800">
-                <img src="./icons/icon-192.webp" alt="ProdFlow" class="w-20 h-20 rounded-2xl shadow-xl mx-auto mb-4" style="border:3px solid rgba(255,255,255,0.3);">
+                <img src="./icons/icon-192.png" alt="ProdFlow" class="w-20 h-20 rounded-2xl shadow-xl mx-auto mb-4" style="border:3px solid rgba(255,255,255,0.3);">
                 <h1 class="text-2xl font-extrabold text-white tracking-tight">ProdFlow</h1>
                 <p class="text-blue-200 text-sm mt-1">Production Management System</p>
             </div>
@@ -150,39 +156,43 @@
                     </button>
                 </div>
                 
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-3 space-y-3">
 
-                    <!-- Row 1: Timeframe toggle — scrollable on small screens -->
-                    <div class="overflow-x-auto -mx-1 px-1">
-                        <div class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 w-max min-w-full">
-                            <button onclick="setDashboardTimeframe('daily')" id="tf-daily" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn" data-i18n="daily">Daily</button>
-                            <button onclick="setDashboardTimeframe('weekly')" id="tf-weekly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="weekly">Weekly</button>
-                            <button onclick="setDashboardTimeframe('monthly')" id="tf-monthly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="monthly">Monthly</button>
-                            <button onclick="setDashboardTimeframe('yearly')" id="tf-yearly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="yearly">Yearly</button>
+                    <!-- Row 1: Timeframe toggle -->
+                    <div class="grid grid-cols-4 gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                        <button onclick="setDashboardTimeframe('daily')" id="tf-daily" class="py-1.5 rounded-md text-xs font-semibold capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn" data-i18n="daily">Daily</button>
+                        <button onclick="setDashboardTimeframe('weekly')" id="tf-weekly" class="py-1.5 rounded-md text-xs font-semibold capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="weekly">Weekly</button>
+                        <button onclick="setDashboardTimeframe('monthly')" id="tf-monthly" class="py-1.5 rounded-md text-xs font-semibold capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="monthly">Monthly</button>
+                        <button onclick="setDashboardTimeframe('yearly')" id="tf-yearly" class="py-1.5 rounded-md text-xs font-semibold capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="yearly">Yearly</button>
+                    </div>
+
+                    <!-- Row 2: Date / Month / Year input -->
+                    <div id="filter-date-wrapper" style="box-sizing:border-box;width:100%;overflow:hidden;">
+                        <input type="date" id="dashFilterDate" onchange="loadDashboard()" onclick="this.showPicker()" style="box-sizing:border-box;width:100%;max-width:100%;" class="cursor-pointer px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
+                    </div>
+                    <div id="filter-month-wrapper" class="hidden" style="box-sizing:border-box;width:100%;overflow:hidden;">
+                        <input type="month" id="dashFilterMonth" onchange="loadDashboard()" onclick="this.showPicker()" style="box-sizing:border-box;width:100%;max-width:100%;" class="cursor-pointer px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
+                    </div>
+                    <div id="filter-year-wrapper" class="hidden" style="box-sizing:border-box;width:100%;overflow:hidden;">
+                        <select id="dashFilterYear" onchange="loadDashboard()" style="box-sizing:border-box;width:100%;max-width:100%;" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm"></select>
+                    </div>
+
+                    <!-- Row 3: Employee + Job filters -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div style="box-sizing:border-box;width:100%;overflow:hidden;">
+                            <select id="dashFilterEmployee" onchange="loadDashboard()" style="box-sizing:border-box;width:100%;max-width:100%;" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm">
+                                <option value="ALL">All Employees</option>
+                            </select>
+                        </div>
+                        <div style="box-sizing:border-box;width:100%;overflow:hidden;">
+                            <select id="dashFilterJob" onchange="loadDashboard()" style="box-sizing:border-box;width:100%;max-width:100%;" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm">
+                                <option value="ALL">All Jobs</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Row 2: Date / Month / Year input — full width -->
-                    <div id="filter-date-wrapper" class="w-full">
-                        <input type="date" id="dashFilterDate" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
                     </div>
-                    <div id="filter-month-wrapper" class="hidden w-full">
-                        <input type="month" id="dashFilterMonth" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
-                    </div>
-                    <div id="filter-year-wrapper" class="hidden w-full">
-                        <select id="dashFilterYear" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm"></select>
-                    </div>
-
-                    <!-- Row 3: Employee + Job filters side by side (stack on very small screens) -->
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-2">
-                        <select id="dashFilterEmployee" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm truncate">
-                            <option value="ALL">All Employees</option>
-                        </select>
-                        <select id="dashFilterJob" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm truncate">
-                            <option value="ALL">All Jobs</option>
-                        </select>
-                    </div>
-
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -209,12 +219,13 @@
                     <div class="overflow-x-auto custom-scroll p-4 sm:p-6 pt-2">
                         <table class="w-full text-left border-collapse min-w-max">
                             <thead class="bg-gray-50 dark:bg-gray-900/50">
-                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 text-sm" id="dashProdTableHeader">
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300 dash-date-col hidden" data-i18n="date">Date</th>
                                     <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="empName">Employee Name</th>
                                     <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="jobName">Job Name</th>
                                     <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="startTime">Start Time</th>
                                     <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="endTime">End Time</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="qty">Quantity Produced</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300" data-i18n="qty">Qty</th>
                                 </tr>
                             </thead>
                             <tbody id="dashProdTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
@@ -489,7 +500,7 @@
     <div id="loadingOverlay" class="fixed inset-0 bg-blue-600 z-[100] hidden flex-col items-center justify-center text-white fade-in" style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#1e40af 100%);">
         <!-- Logo -->
         <div class="mb-5 drop-shadow-xl" style="animation:splashPop 0.5s cubic-bezier(.34,1.56,.64,1) both;">
-            <img src="./icons/icon-192.webp" alt="ProdFlow" class="w-24 h-24 rounded-2xl shadow-2xl" style="border:3px solid rgba(255,255,255,0.25);">
+            <img src="./icons/icon-192.png" alt="ProdFlow" class="w-24 h-24 rounded-2xl shadow-2xl" style="border:3px solid rgba(255,255,255,0.25);">
         </div>
         <!-- Welcome text -->
         <h1 class="text-3xl font-extrabold tracking-tight mb-1" style="animation:splashPop 0.5s 0.1s cubic-bezier(.34,1.56,.64,1) both;opacity:0;">Welcome to ProdFlow</h1>
@@ -976,14 +987,22 @@
             // Sort newest first
             const sortedLogs = [...filteredLogs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+            // Show/hide the Date column based on timeframe
+            const showDateCol = selectedTimeframe !== 'daily';
+            document.querySelectorAll('.dash-date-col').forEach(el => {
+                el.classList.toggle('hidden', !showDateCol);
+            });
+
             sortedLogs.forEach(l => {
                 const jobName = db.jobs.find(j => j.id === l.jobId)?.name || 'Unknown';
                 const empName = db.users.find(u => String(u.id) === String(l.userId))?.name || 'Admin';
                 const start = l.timeData?.startTime || '-';
                 const end = l.timeData?.endTime || '-';
+                const dateDisplay = formatDateDisplay(l.dateStr);
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400 dash-date-col ${showDateCol ? '' : 'hidden'}">${dateDisplay}</td>
                         <td class="p-4 font-medium">${empName}</td>
                         <td class="p-4 text-blue-600 dark:text-blue-400 font-medium">${jobName}</td>
                         <td class="p-4 whitespace-nowrap">${start}</td>
