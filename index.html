@@ -150,41 +150,39 @@
                     </button>
                 </div>
                 
-                <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    <div class="flex flex-wrap items-center gap-4">
-                        <!-- Timeframe Toggle -->
-                        <div class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
-                            <button onclick="setDashboardTimeframe('daily')" id="tf-daily" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn" data-i18n="daily">Daily</button>
-                            <button onclick="setDashboardTimeframe('weekly')" id="tf-weekly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="weekly">Weekly</button>
-                            <button onclick="setDashboardTimeframe('monthly')" id="tf-monthly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="monthly">Monthly</button>
-                            <button onclick="setDashboardTimeframe('yearly')" id="tf-yearly" class="px-4 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="yearly">Yearly</button>
-                        </div>
-                        
-                        <!-- Dynamic Date/Month/Year Inputs -->
-                        <div id="filter-date-wrapper" class="flex-1 min-w-[200px]">
-                            <input type="date" id="dashFilterDate" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none" />
-                        </div>
-                        <div id="filter-month-wrapper" class="hidden flex-1 min-w-[200px]">
-                            <input type="month" id="dashFilterMonth" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none" />
-                        </div>
-                        <div id="filter-year-wrapper" class="hidden flex-1 min-w-[200px]">
-                            <select id="dashFilterYear" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none"></select>
-                        </div>
-                        
-                        <!-- Employee Filter -->
-                        <div class="flex-1 min-w-[200px]">
-                            <select id="dashFilterEmployee" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none">
-                                <option value="ALL">-- All Employees --</option>
-                            </select>
-                        </div>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
 
-                        <!-- Job Filter -->
-                        <div class="flex-1 min-w-[200px]">
-                            <select id="dashFilterJob" onchange="loadDashboard()" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none">
-                                <option value="ALL">-- All Jobs --</option>
-                            </select>
+                    <!-- Row 1: Timeframe toggle — scrollable on small screens -->
+                    <div class="overflow-x-auto -mx-1 px-1">
+                        <div class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 w-max min-w-full">
+                            <button onclick="setDashboardTimeframe('daily')" id="tf-daily" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400 tf-btn" data-i18n="daily">Daily</button>
+                            <button onclick="setDashboardTimeframe('weekly')" id="tf-weekly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="weekly">Weekly</button>
+                            <button onclick="setDashboardTimeframe('monthly')" id="tf-monthly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="monthly">Monthly</button>
+                            <button onclick="setDashboardTimeframe('yearly')" id="tf-yearly" class="flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 tf-btn" data-i18n="yearly">Yearly</button>
                         </div>
                     </div>
+
+                    <!-- Row 2: Date / Month / Year input — full width -->
+                    <div id="filter-date-wrapper" class="w-full">
+                        <input type="date" id="dashFilterDate" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
+                    </div>
+                    <div id="filter-month-wrapper" class="hidden w-full">
+                        <input type="month" id="dashFilterMonth" onchange="loadDashboard()" onclick="this.showPicker()" class="cursor-pointer w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm" />
+                    </div>
+                    <div id="filter-year-wrapper" class="hidden w-full">
+                        <select id="dashFilterYear" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm"></select>
+                    </div>
+
+                    <!-- Row 3: Employee + Job filters side by side (stack on very small screens) -->
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-2">
+                        <select id="dashFilterEmployee" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm truncate">
+                            <option value="ALL">All Employees</option>
+                        </select>
+                        <select id="dashFilterJob" onchange="loadDashboard()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 outline-none text-sm truncate">
+                            <option value="ALL">All Jobs</option>
+                        </select>
+                    </div>
+
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -506,7 +504,7 @@
         // ---------------------------------------------------------
         // CONFIGURATION: APPS SCRIPT & APK UPDATE OTA GIST
         // ---------------------------------------------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxboVgwceMyHcqeJLqL8srcw_UIBx01r5t31wzE8YejoYCPf3a2HolgEVJLktBcuTdd/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweoJp_60lopIqgSdu-mc78gJxFnx5RjORfopwczZLA4pygQHRzbCAxub7Kps3Qu6Os/exec';
 
         // --- STATE ---
         let db = { users: [], jobs: [], logs: [] };
@@ -555,6 +553,24 @@
 
         // --- API INTEGRATION ---
         // ── Timezone-safe local date helpers ─────────────────────────────────
+        // Normalize any dateStr (may be "YYYY-MM-DD" or legacy "2026-06-14T18:30:00.000Z")
+        // to a clean "DD MMM YYYY" display string using the device's LOCAL timezone.
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '-';
+            // Take only the date part (first 10 chars) — handles both formats
+            const datePart = String(dateStr).substring(0, 10); // "YYYY-MM-DD"
+            // Parse as local date using / separator (avoids UTC-midnight issue)
+            const d = new Date(datePart.replace(/-/g, '/'));
+            if (isNaN(d)) return datePart; // fallback: show raw if unparseable
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        // Normalize dateStr to YYYY-MM-DD (strips time part if present)
+        function normalizeDateStr(dateStr) {
+            if (!dateStr) return '';
+            return String(dateStr).substring(0, 10);
+        }
+        // ── Timezone-safe local date helpers (localDateStr below) ──────────────
         // NEVER use new Date().toISOString().split('T')[0] — that gives UTC date.
         // Use localDateStr() everywhere we need today's date in YYYY-MM-DD local time.
         function localDateStr(date) {
@@ -1301,7 +1317,7 @@
                 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td class="p-4 whitespace-nowrap">${l.dateStr}</td>
+                        <td class="p-4 whitespace-nowrap">${formatDateDisplay(l.dateStr)}</td>
                         ${isManagerOrAbove ? `<td class="p-4 font-medium">${empName}</td>` : ''}
                         <td class="p-4 text-blue-600 dark:text-blue-400 font-medium">${jobName}</td>
                         <td class="p-4 whitespace-nowrap">${start}</td>
@@ -1322,7 +1338,7 @@
             if(!log) return;
 
             document.getElementById('editLogId').value = log.id;
-            document.getElementById('editDate').value = log.dateStr;
+            document.getElementById('editDate').value = normalizeDateStr(log.dateStr);
             document.getElementById('editQty').value = log.qty;
             document.getElementById('editStartTime').value = log.timeData?.startTime || '';
             document.getElementById('editEndTime').value = log.timeData?.endTime || '';
